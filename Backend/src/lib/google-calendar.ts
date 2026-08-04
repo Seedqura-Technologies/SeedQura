@@ -53,10 +53,39 @@ function eventBody(input: CalendarSessionInput) {
   };
 }
 
+function isAttendeeDelegationError(message: string) {
+  return /domain-wide delegation|cannot invite attendees/i.test(message);
+}
+
+async function writeEvent(opts: {
+  calendar: ReturnType<typeof google.calendar>;
+  calendarId: string;
+  googleEventId?: string | null;
+  body: ReturnType<typeof eventBody>;
+  sendUpdates: "all" | "none";
+}) {
+  if (opts.googleEventId) {
+    const updated = await opts.calendar.events.patch({
+      calendarId: opts.calendarId,
+      eventId: opts.googleEventId,
+      sendUpdates: opts.sendUpdates,
+      requestBody: opts.body,
+    });
+    return updated.data.id || opts.googleEventId;
+  }
+  const created = await opts.calendar.events.insert({
+    calendarId: opts.calendarId,
+    sendUpdates: opts.sendUpdates,
+    requestBody: opts.body,
+  });
+  return created.data.id || undefined;
+}
+
 export async function upsertCalendarEvent(input: CalendarSessionInput): Promise<{
   ok: boolean;
   eventId?: string;
   skipped?: boolean;
+  invitedViaGoogle?: boolean;
   error?: string;
 }> {
   if (!calendarConfigured()) {
@@ -67,28 +96,45 @@ export async function upsertCalendarEvent(input: CalendarSessionInput): Promise<
   const calendarId = process.env.GOOGLE_CALENDAR_ID!;
   if (!auth) return { ok: true, skipped: true };
 
+  const calendar = google.calendar({ version: "v3", auth });
+  const body = eventBody(input);
+
   try {
-    const calendar = google.calendar({ version: "v3", auth });
-    const body = eventBody(input);
-
-    if (input.googleEventId) {
-      const updated = await calendar.events.patch({
-        calendarId,
-        eventId: input.googleEventId,
-        sendUpdates: "all",
-        requestBody: body,
-      });
-      return { ok: true, eventId: updated.data.id || input.googleEventId };
-    }
-
-    const created = await calendar.events.insert({
+    // Prefer Google invites when Domain-Wide Delegation is configured.
+    const eventId = await writeEvent({
+      calendar,
       calendarId,
+      googleEventId: input.googleEventId,
+      body,
       sendUpdates: "all",
-      requestBody: body,
     });
-    return { ok: true, eventId: created.data.id || undefined };
+    return { ok: true, eventId, invitedViaGoogle: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    // Consumer Google Cloud service accounts cannot invite attendees without
+    // Workspace Domain-Wide Delegation. Fall back to event-only; students still
+    // receive Resend email + .ics invite from syncSessionCalendarAndNotify.
+    if (isAttendeeDelegationError(message)) {
+      try {
+        const bodyNoAttendees = { ...body, attendees: [] };
+        const eventId = await writeEvent({
+          calendar,
+          calendarId,
+          googleEventId: input.googleEventId,
+          body: bodyNoAttendees,
+          sendUpdates: "none",
+        });
+        console.warn(
+          "[google-calendar] created event without Google invites (no Domain-Wide Delegation). Students get email + ICS instead."
+        );
+        return { ok: true, eventId, invitedViaGoogle: false };
+      } catch (fallbackErr) {
+        const fallbackMessage =
+          fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+        console.error("[google-calendar fallback]", fallbackMessage);
+        return { ok: false, error: fallbackMessage };
+      }
+    }
     console.error("[google-calendar]", message);
     return { ok: false, error: message };
   }
