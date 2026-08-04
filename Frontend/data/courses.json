@@ -1,0 +1,114 @@
+{
+  "courses": [
+    {
+      "id": "academy",
+      "name": "Seedqura Academy",
+      "tagline": "Research mentorship program",
+      "description": "A structured mentorship for students — guided projects in AI for agriculture and medicine, led by active researchers from leading institutions.",
+      "category": "Program",
+      "level": "Intermediate",
+      "duration": "12 weeks",
+      "format": "Live sessions + 1:1 mentorship",
+      "price": 24999,
+      "currency": "INR",
+      "priceDisplay": "₹24,999",
+      "status": "Now Enrolling",
+      "featured": true,
+      "features": [
+        "Mentor-led research projects",
+        "Live foundational sessions",
+        "Publication-oriented outcomes",
+        "Certificate on completion"
+      ],
+      "cta": { "label": "Apply Now", "href": "/apply" }
+    },
+    {
+      "id": "crop-vision",
+      "name": "Crop Vision with PyTorch",
+      "tagline": "Computer vision for field intelligence",
+      "description": "Build and deploy disease-detection models for agricultural imagery — from dataset curation to edge-ready inference pipelines.",
+      "category": "Course",
+      "level": "Intermediate",
+      "duration": "6 weeks",
+      "format": "Self-paced + live labs",
+      "price": 4999,
+      "currency": "INR",
+      "priceDisplay": "₹4,999",
+      "status": "Open",
+      "featured": true,
+      "features": [
+        "Multispectral & RGB pipelines",
+        "Hands-on PyTorch projects",
+        "Model evaluation frameworks",
+        "Deployment walkthrough"
+      ],
+      "cta": { "label": "Enroll Now", "href": "/#contact" }
+    },
+    {
+      "id": "clinical-ai",
+      "name": "Clinical AI Fundamentals",
+      "tagline": "Medical imaging & decision support",
+      "description": "Introduction to hospital-grade AI workflows — imaging triage, clinical NLP, and responsible integration patterns for healthcare settings.",
+      "category": "Course",
+      "level": "Advanced",
+      "duration": "8 weeks",
+      "format": "Live cohort",
+      "price": 6999,
+      "currency": "INR",
+      "priceDisplay": "₹6,999",
+      "status": "Open",
+      "featured": false,
+      "features": [
+        "X-ray & MRI triage basics",
+        "Clinical pathway NLP",
+        "Regulatory awareness module",
+        "Case studies from pilots"
+      ],
+      "cta": { "label": "Enroll Now", "href": "/#contact" }
+    },
+    {
+      "id": "remote-sensing",
+      "name": "Remote Sensing for Agriculture",
+      "tagline": "Satellite analytics at scale",
+      "description": "Process aerial and satellite data for crop monitoring, yield estimation, and large-scale field intelligence using modern geospatial ML.",
+      "category": "Course",
+      "level": "Intermediate",
+      "duration": "5 weeks",
+      "format": "Self-paced",
+      "price": null,
+      "currency": "INR",
+      "priceDisplay": "Coming soon",
+      "status": "Coming Soon",
+      "featured": false,
+      "features": [
+        "Sentinel & drone data workflows",
+        "Time-series crop analytics",
+        "GIS + ML integration",
+        "Field deployment patterns"
+      ],
+      "cta": { "label": "Join Waitlist", "href": "/#contact" }
+    },
+    {
+      "id": "research-pilots",
+      "name": "Research Pilots",
+      "tagline": "Enterprise & hospital partnerships",
+      "description": "Hospital and field deployment tools under active development. Partner with us for pilot programs tailored to your organization.",
+      "category": "Partnership",
+      "level": "Enterprise",
+      "duration": "Custom",
+      "format": "Dedicated engagement",
+      "price": null,
+      "currency": "INR",
+      "priceDisplay": "Custom",
+      "status": "By inquiry",
+      "featured": false,
+      "features": [
+        "Custom synthetic populations",
+        "Validation studies",
+        "On-site integration support",
+        "Dedicated success manager"
+      ],
+      "cta": { "label": "Get In Touch", "href": "/#contact" }
+    }
+  ]
+}

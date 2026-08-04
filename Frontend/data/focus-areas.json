@@ -1,0 +1,22 @@
+{
+  "areas": [
+    {
+      "id": "agri",
+      "title": "Agriculture AI",
+      "description": "Crop health monitoring, yield prediction, and farmer decision support using AI and sensor data.",
+      "image": "/images/focus/agri.jpg"
+    },
+    {
+      "id": "medical",
+      "title": "Medical AI",
+      "description": "Diagnostics support, clinical pathways, and tools designed for tertiary hospital integration.",
+      "image": "/images/focus/medical.jpg"
+    },
+    {
+      "id": "research",
+      "title": "Research & Innovation",
+      "description": "Exploring emerging technologies and transforming ideas into practical, deployable products.",
+      "image": "/images/focus/research.jpg"
+    }
+  ]
+}

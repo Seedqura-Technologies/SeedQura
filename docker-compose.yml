@@ -1,0 +1,55 @@
+services:
+  redis:
+    image: redis:7-alpine
+    profiles: ["infra", "prod"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ./Backend
+    profiles: ["prod"]
+    environment:
+      PORT: 3001
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    expose:
+      - "3001"
+
+  frontend:
+    build:
+      context: ./Frontend
+      args:
+        API_URL: http://backend:3001
+    profiles: ["prod"]
+    environment:
+      PORT: 3020
+      API_URL: http://backend:3001
+    depends_on:
+      - backend
+    expose:
+      - "3020"
+
+  nginx:
+    image: nginx:1.27-alpine
+    profiles: ["prod"]
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  redis_data:
