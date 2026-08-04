@@ -28,6 +28,9 @@ yarn-error.log*
 # Vercel
 .vercel
 
+# Large source logo backup (generated assets use compressed copies)
+Frontend/public/logo-original.png
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts

@@ -65,13 +65,14 @@ All editable content lives in `Frontend/data/`:
 
 ## Deployment options
 
-### Option A — Vercel + PaaS backend (simplest)
+### Option A — Vercel + Render + seedqura.com (recommended)
 
-- **Frontend:** Deploy `Frontend/` to [Vercel](https://vercel.com)
-  - Set `API_URL` to your backend URL
-- **Backend:** Deploy `Backend/` to Railway, Render, or similar
-  - Set `FRONTEND_URL` to your Vercel domain
-  - Optional: add [Upstash Redis](https://upstash.com) and set `REDIS_URL` for distributed rate limiting
+Full production steps (domain, env vars, Supabase, Razorpay, Resend): see **[DEPLOY.md](./DEPLOY.md)**.
+
+- **Frontend:** Deploy `Frontend/` to [Vercel](https://vercel.com) → attach `seedqura.com`
+- **Backend:** Deploy `Backend/` to [Render](https://render.com) (Blueprint: `render.yaml`)
+  - Set `FRONTEND_URL=https://seedqura.com` and `API_URL` on Vercel to your Render URL
+- Optional: add [Upstash Redis](https://upstash.com) and set `REDIS_URL` for distributed rate limiting
 
 No nginx needed — Vercel is the CDN/reverse proxy for the frontend.
 

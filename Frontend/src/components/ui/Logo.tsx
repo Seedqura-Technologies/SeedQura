@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 export const LOGO_SRC = "/logo.png";
+export const LOGO_MARK_SRC = "/logo-mark.png";
 export const LOGO_ALT = "Seedqura";
 
 type LogoProps = {
@@ -18,6 +19,12 @@ const sizes = {
   hero: "h-24 w-auto sm:h-28 md:h-32",
 };
 
+const sources = {
+  header: LOGO_MARK_SRC,
+  footer: LOGO_MARK_SRC,
+  hero: LOGO_SRC,
+} as const;
+
 export function Logo({
   href,
   variant = "header",
@@ -27,7 +34,7 @@ export function Logo({
 }: LogoProps) {
   const image = (
     <Image
-      src={LOGO_SRC}
+      src={sources[variant]}
       alt={LOGO_ALT}
       width={variant === "hero" ? 320 : variant === "footer" ? 200 : 160}
       height={variant === "hero" ? 120 : variant === "footer" ? 72 : 56}

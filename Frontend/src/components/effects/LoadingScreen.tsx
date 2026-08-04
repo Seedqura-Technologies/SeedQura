@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { LOGO_SRC, LOGO_ALT } from "@/components/ui/Logo";
+import { LOGO_MARK_SRC, LOGO_ALT } from "@/components/ui/Logo";
 
 // Precomputed to avoid server/client float drift from Math.sin/cos during hydration
 const LOADER_DOTS = [
@@ -43,7 +43,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 transition={{ duration: 2, repeat: Infinity }}
               />
               <Image
-                src={LOGO_SRC}
+                src={LOGO_MARK_SRC}
                 alt={LOGO_ALT}
                 width={160}
                 height={56}
