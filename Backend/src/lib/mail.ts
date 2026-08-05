@@ -1,9 +1,16 @@
 import { Resend } from "resend";
 
+let _resend: Resend | null | undefined;
+
 function client() {
+  if (_resend !== undefined) return _resend;
   const key = process.env.RESEND_API_KEY;
-  if (!key) return null;
-  return new Resend(key);
+  if (!key) {
+    _resend = null;
+    return null;
+  }
+  _resend = new Resend(key);
+  return _resend;
 }
 
 function fromAddress() {

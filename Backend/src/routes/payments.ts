@@ -13,11 +13,18 @@ import {
 
 export const paymentsRouter = Router();
 
-function razorpayClient() {
+let _razorpay: Razorpay | null | undefined;
+
+function razorpayClient(): Razorpay | null {
+  if (_razorpay !== undefined) return _razorpay;
   const key_id = process.env.RAZORPAY_KEY_ID;
   const key_secret = process.env.RAZORPAY_KEY_SECRET;
-  if (!key_id || !key_secret) return null;
-  return new Razorpay({ key_id, key_secret });
+  if (!key_id || !key_secret) {
+    _razorpay = null;
+    return null;
+  }
+  _razorpay = new Razorpay({ key_id, key_secret });
+  return _razorpay;
 }
 
 function verifySignature(
@@ -31,9 +38,79 @@ function verifySignature(
     .createHmac("sha256", secret)
     .update(`${orderId}|${paymentId}`)
     .digest("hex");
-  return expected === signature;
+  try {
+    const a = Buffer.from(expected, "utf8");
+    const b = Buffer.from(String(signature), "utf8");
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
 }
 
+function verifyWebhookSignature(rawBody: string, signature: string): boolean {
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!secret) return false;
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
+  try {
+    const a = Buffer.from(expected, "utf8");
+    const b = Buffer.from(signature, "utf8");
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+/** Fire-and-forget side effects — never block the HTTP response. */
+function runBackground(label: string, work: Promise<unknown>) {
+  void work.catch((err) => {
+    console.error(`[payments/${label}]`, err);
+  });
+}
+
+async function notifyPaymentSuccess(opts: {
+  userId: string;
+  courseId: string;
+  amount: number;
+  name: string;
+  email: string | null | undefined;
+  courseName: string;
+  amountDisplay: string;
+}) {
+  const tasks: Promise<unknown>[] = [
+    createNotification({
+      userId: opts.userId,
+      type: "payment_success",
+      title: "Payment confirmed",
+      body: `You're enrolled in ${opts.courseName}.`,
+      metadata: { courseId: opts.courseId },
+    }),
+  ];
+
+  if (opts.email) {
+    const pay = paymentSuccessEmail(
+      opts.name,
+      opts.courseName,
+      opts.amountDisplay
+    );
+    const enroll = enrollmentConfirmationEmail(opts.name, opts.courseName);
+    tasks.push(
+      sendMail({ to: opts.email, ...pay }),
+      sendMail({ to: opts.email, ...enroll })
+    );
+  }
+
+  await Promise.all(tasks);
+}
+
+/**
+ * Persist paid state (blocking). Notifications/emails run in parallel afterward
+ * and can be deferred by the caller so verify responds immediately.
+ */
 async function activateEnrollment(opts: {
   enrollmentId: string;
   userId: string;
@@ -42,53 +119,72 @@ async function activateEnrollment(opts: {
   razorpayPaymentId: string;
   amount: number;
   currency: string;
+  /** When true, wait for emails/notifications (webhook). Default: background. */
+  awaitSideEffects?: boolean;
 }) {
   const admin = getSupabaseAdmin();
-  await admin
-    .from("payments")
-    .update({
-      status: "paid",
-      razorpay_payment_id: opts.razorpayPaymentId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", opts.paymentRowId);
+  const now = new Date().toISOString();
 
-  await admin
-    .from("enrollments")
-    .update({
-      status: "active",
-      payment_status: "paid",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", opts.enrollmentId);
-
-  const [{ data: profile }, { data: course }] = await Promise.all([
-    admin.from("profiles").select("full_name, email").eq("id", opts.userId).maybeSingle(),
-    admin.from("courses").select("name, price_display").eq("id", opts.courseId).maybeSingle(),
+  // Independent row updates — run together to cut round-trips.
+  const [payRes, enrRes, profileRes, courseRes] = await Promise.all([
+    admin
+      .from("payments")
+      .update({
+        status: "paid",
+        razorpay_payment_id: opts.razorpayPaymentId,
+        updated_at: now,
+      })
+      .eq("id", opts.paymentRowId)
+      .neq("status", "paid"),
+    admin
+      .from("enrollments")
+      .update({
+        status: "active",
+        payment_status: "paid",
+        updated_at: now,
+      })
+      .eq("id", opts.enrollmentId),
+    admin
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", opts.userId)
+      .maybeSingle(),
+    admin
+      .from("courses")
+      .select("name, price_display")
+      .eq("id", opts.courseId)
+      .maybeSingle(),
   ]);
 
-  const name = profile?.full_name || "";
-  const email = profile?.email;
-  const courseName = course?.name || opts.courseId;
+  if (payRes.error) throw payRes.error;
+  if (enrRes.error) throw enrRes.error;
+
+  const name = profileRes.data?.full_name || "";
+  const email = profileRes.data?.email;
+  const courseName = courseRes.data?.name || opts.courseId;
   const amountDisplay =
-    course?.price_display ||
+    courseRes.data?.price_display ||
     `₹${(opts.amount / 100).toLocaleString("en-IN")}`;
 
-  await createNotification({
+  const sideEffects = notifyPaymentSuccess({
     userId: opts.userId,
-    type: "payment_success",
-    title: "Payment confirmed",
-    body: `You're enrolled in ${courseName}.`,
-    metadata: { courseId: opts.courseId },
+    courseId: opts.courseId,
+    amount: opts.amount,
+    name,
+    email,
+    courseName,
+    amountDisplay,
   });
 
-  if (email) {
-    const pay = paymentSuccessEmail(name, courseName, amountDisplay);
-    await sendMail({ to: email, ...pay });
-    const enroll = enrollmentConfirmationEmail(name, courseName);
-    await sendMail({ to: email, ...enroll });
+  if (opts.awaitSideEffects) {
+    await sideEffects;
+  } else {
+    runBackground("activate-notify", sideEffects);
   }
 }
+
+const COURSE_ORDER_FIELDS =
+  "id, name, status, price_inr, price_display, currency, registration_deadline";
 
 paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
   try {
@@ -99,12 +195,24 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
     }
 
     const admin = getSupabaseAdmin();
-    const { data: course, error } = await admin
-      .from("courses")
-      .select("*")
-      .eq("id", courseId)
-      .eq("status", "published")
-      .maybeSingle();
+    const userId = req.userId!;
+
+    // Parallel: course lookup + existing enrollment
+    const [{ data: course, error }, { data: existing }] = await Promise.all([
+      admin
+        .from("courses")
+        .select(COURSE_ORDER_FIELDS)
+        .eq("id", courseId)
+        .eq("status", "published")
+        .maybeSingle(),
+      admin
+        .from("enrollments")
+        .select("id, status, payment_status")
+        .eq("user_id", userId)
+        .eq("course_id", courseId)
+        .maybeSingle(),
+    ]);
+
     if (error) throw error;
     if (!course) {
       res.status(404).json({ error: "Course not found" });
@@ -122,13 +230,6 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
       return;
     }
 
-    const { data: existing } = await admin
-      .from("enrollments")
-      .select("id, status, payment_status")
-      .eq("user_id", req.userId!)
-      .eq("course_id", courseId)
-      .maybeSingle();
-
     if (existing?.status === "active" && existing.payment_status === "paid") {
       res.status(400).json({ error: "Already enrolled" });
       return;
@@ -139,7 +240,7 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
       const { data: created, error: eErr } = await admin
         .from("enrollments")
         .insert({
-          user_id: req.userId!,
+          user_id: userId,
           course_id: courseId,
           status: "pending_payment",
           payment_status: "pending",
@@ -160,10 +261,13 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
     }
 
     const amountPaise = course.price_inr * 100;
+    const currency = course.currency || "INR";
     const rz = razorpayClient();
 
+    const studentName = req.profile?.full_name || "";
+    const studentEmail = req.userEmail || "";
+
     if (!rz) {
-      // Dev fallback when Razorpay keys missing: create local "order"
       const fakeOrderId = `order_dev_${Date.now()}`;
       const { data: payment, error: pErr } = await admin
         .from("payments")
@@ -171,7 +275,7 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
           enrollment_id: enrollmentId,
           razorpay_order_id: fakeOrderId,
           amount: amountPaise,
-          currency: course.currency || "INR",
+          currency,
           status: "created",
           raw: { mode: "dev" },
         })
@@ -182,13 +286,13 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
       res.json({
         orderId: fakeOrderId,
         amount: amountPaise,
-        currency: course.currency || "INR",
+        currency,
         keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_dev",
         enrollmentId,
         paymentId: payment.id,
         courseName: course.name,
-        studentName: req.profile?.full_name || "",
-        studentEmail: req.userEmail || "",
+        studentName,
+        studentEmail,
         devMode: true,
       });
       return;
@@ -196,12 +300,12 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
 
     const order = await rz.orders.create({
       amount: amountPaise,
-      currency: course.currency || "INR",
+      currency,
       receipt: `enr_${enrollmentId}`.slice(0, 40),
       notes: {
         enrollment_id: enrollmentId!,
         course_id: courseId,
-        user_id: req.userId!,
+        user_id: userId,
       },
     });
 
@@ -211,7 +315,7 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
         enrollment_id: enrollmentId,
         razorpay_order_id: order.id,
         amount: amountPaise,
-        currency: course.currency || "INR",
+        currency,
         status: "created",
         raw: order,
       })
@@ -222,13 +326,14 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
     res.json({
       orderId: order.id,
       amount: amountPaise,
-      currency: course.currency || "INR",
-      keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
+      currency,
+      keyId:
+        process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
       enrollmentId,
       paymentId: payment.id,
       courseName: course.name,
-      studentName: req.profile?.full_name || "",
-      studentEmail: req.userEmail || "",
+      studentName,
+      studentEmail,
       devMode: false,
     });
   } catch (err) {
@@ -255,7 +360,9 @@ paymentsRouter.post("/verify", requireAuth, async (req: AuthedRequest, res) => {
     if (devComplete && String(razorpay_order_id || "").startsWith("order_dev_")) {
       const { data: payment } = await admin
         .from("payments")
-        .select("*")
+        .select(
+          "id, amount, currency, status, enrollment_id, enrollment:enrollments(id, user_id, course_id)"
+        )
         .eq("id", paymentId)
         .eq("razorpay_order_id", razorpay_order_id)
         .maybeSingle();
@@ -263,10 +370,20 @@ paymentsRouter.post("/verify", requireAuth, async (req: AuthedRequest, res) => {
         res.status(404).json({ error: "Payment not found" });
         return;
       }
+
+      if (payment.status === "paid") {
+        res.json({ ok: true, devMode: true, alreadyPaid: true });
+        return;
+      }
+
+      const enrollment = Array.isArray(payment.enrollment)
+        ? payment.enrollment[0]
+        : payment.enrollment;
+
       await activateEnrollment({
         enrollmentId: enrollmentId || payment.enrollment_id,
         userId: req.userId!,
-        courseId,
+        courseId: courseId || enrollment?.course_id,
         paymentRowId: payment.id,
         razorpayPaymentId: `pay_dev_${Date.now()}`,
         amount: payment.amount,
@@ -286,6 +403,7 @@ paymentsRouter.post("/verify", requireAuth, async (req: AuthedRequest, res) => {
       return;
     }
 
+    // Verify signature before any DB work
     if (
       !verifySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature)
     ) {
@@ -293,9 +411,12 @@ paymentsRouter.post("/verify", requireAuth, async (req: AuthedRequest, res) => {
       return;
     }
 
+    // Single query: payment + enrollment
     const { data: payment } = await admin
       .from("payments")
-      .select("*")
+      .select(
+        "id, amount, currency, status, enrollment_id, razorpay_order_id, enrollment:enrollments(id, user_id, course_id)"
+      )
       .eq("id", paymentId)
       .eq("razorpay_order_id", razorpay_order_id)
       .maybeSingle();
@@ -305,14 +426,18 @@ paymentsRouter.post("/verify", requireAuth, async (req: AuthedRequest, res) => {
       return;
     }
 
-    const { data: enrollment } = await admin
-      .from("enrollments")
-      .select("*")
-      .eq("id", payment.enrollment_id)
-      .maybeSingle();
+    const enrollment = Array.isArray(payment.enrollment)
+      ? payment.enrollment[0]
+      : payment.enrollment;
 
     if (!enrollment || enrollment.user_id !== req.userId) {
       res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    // Idempotent: already verified
+    if (payment.status === "paid") {
+      res.json({ ok: true, alreadyPaid: true });
       return;
     }
 
@@ -326,6 +451,7 @@ paymentsRouter.post("/verify", requireAuth, async (req: AuthedRequest, res) => {
       currency: payment.currency,
     });
 
+    // Client gets success as soon as DB is committed; emails continue in background
     res.json({ ok: true });
   } catch (err) {
     console.error("[payments/verify]", err);
@@ -337,35 +463,57 @@ paymentsRouter.post("/failed", requireAuth, async (req: AuthedRequest, res) => {
   try {
     const { courseId, paymentId } = req.body || {};
     const admin = getSupabaseAdmin();
+
+    const tasks: Promise<unknown>[] = [];
     if (paymentId) {
-      await admin
-        .from("payments")
-        .update({ status: "failed", updated_at: new Date().toISOString() })
-        .eq("id", paymentId);
+      tasks.push(
+        Promise.resolve(
+          admin
+            .from("payments")
+            .update({ status: "failed", updated_at: new Date().toISOString() })
+            .eq("id", paymentId)
+        )
+      );
     }
+
+    let courseName = courseId ? String(courseId) : "";
     if (courseId) {
-      const { data: course } = await admin
-        .from("courses")
-        .select("name")
-        .eq("id", courseId)
-        .maybeSingle();
-      const email = req.userEmail;
-      if (email) {
-        const mail = paymentFailedEmail(
-          req.profile?.full_name || "",
-          course?.name || courseId
-        );
-        await sendMail({ to: email, ...mail });
-      }
-      await createNotification({
-        userId: req.userId!,
-        type: "payment_failed",
-        title: "Payment failed",
-        body: `Payment for ${course?.name || courseId} did not complete.`,
-        metadata: { courseId },
-      });
+      tasks.push(
+        Promise.resolve(
+          admin.from("courses").select("name").eq("id", courseId).maybeSingle()
+        ).then(({ data }) => {
+          courseName = data?.name || String(courseId);
+        })
+      );
     }
+
+    await Promise.all(tasks);
+
+    // Respond first — failure notification must not delay the client
     res.json({ ok: true });
+
+    if (courseId) {
+      const email = req.userEmail;
+      const name = req.profile?.full_name || "";
+      runBackground(
+        "failed-notify",
+        Promise.all([
+          email
+            ? sendMail({
+                to: email,
+                ...paymentFailedEmail(name, courseName),
+              })
+            : Promise.resolve(),
+          createNotification({
+            userId: req.userId!,
+            type: "payment_failed",
+            title: "Payment failed",
+            body: `Payment for ${courseName} did not complete.`,
+            metadata: { courseId },
+          }),
+        ])
+      );
+    }
   } catch (err) {
     console.error("[payments/failed]", err);
     res.status(500).json({ error: "Failed to record failure" });
@@ -378,11 +526,7 @@ paymentsRouter.post("/webhook", async (req, res) => {
     const signature = req.headers["x-razorpay-signature"] as string | undefined;
     if (secret && signature) {
       const body = JSON.stringify(req.body);
-      const expected = crypto
-        .createHmac("sha256", secret)
-        .update(body)
-        .digest("hex");
-      if (expected !== signature) {
+      if (!verifyWebhookSignature(body, signature)) {
         res.status(400).json({ error: "Invalid webhook signature" });
         return;
       }
@@ -394,16 +538,18 @@ paymentsRouter.post("/webhook", async (req, res) => {
       const admin = getSupabaseAdmin();
       const { data: payment } = await admin
         .from("payments")
-        .select("*")
+        .select(
+          "id, amount, currency, status, enrollment_id, enrollment:enrollments(id, user_id, course_id)"
+        )
         .eq("razorpay_order_id", payload.order_id)
         .maybeSingle();
+
       if (payment && payment.status !== "paid") {
-        const { data: enrollment } = await admin
-          .from("enrollments")
-          .select("*")
-          .eq("id", payment.enrollment_id)
-          .maybeSingle();
+        const enrollment = Array.isArray(payment.enrollment)
+          ? payment.enrollment[0]
+          : payment.enrollment;
         if (enrollment) {
+          // Commit paid state before ACK; emails still run in background
           await activateEnrollment({
             enrollmentId: enrollment.id,
             userId: enrollment.user_id,
