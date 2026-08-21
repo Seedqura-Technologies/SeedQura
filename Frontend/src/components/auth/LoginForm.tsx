@@ -8,14 +8,38 @@ import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/ui/Logo";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 
+function safeNext(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/dashboard";
+  return raw;
+}
+
+function friendlyAuthError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("invalid login") || m.includes("invalid credentials")) {
+    return "Incorrect email or password.";
+  }
+  if (m.includes("email not confirmed")) {
+    return "Please confirm your email before logging in.";
+  }
+  if (m.includes("too many requests")) {
+    return "Too many attempts. Please wait a moment and try again.";
+  }
+  return message;
+}
+
 export function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
-  const next = search.get("next") || "/dashboard";
+  const next = safeNext(search.get("next"));
+  const registered = search.get("registered") === "1";
+  const reset = search.get("reset") === "1";
+  const queryError = search.get("error");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(
+    queryError ? friendlyAuthError(queryError) : ""
+  );
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
@@ -26,7 +50,7 @@ export function LoginForm() {
       const supabase = createClient();
       if (!supabase) throw new Error("Auth is not configured");
       const { error: err } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
       if (err) throw err;
@@ -49,7 +73,8 @@ export function LoginForm() {
       router.replace(next);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      const raw = err instanceof Error ? err.message : "Login failed";
+      setError(friendlyAuthError(raw));
     } finally {
       setLoading(false);
     }
@@ -66,34 +91,58 @@ export function LoginForm() {
       <p className="mt-3 text-center text-sm text-muted">
         New here?{" "}
         <Link
-          href={`/signup${next ? `?next=${encodeURIComponent(next)}` : ""}`}
+          href={`/signup?next=${encodeURIComponent(next)}`}
           className="font-medium text-accent hover:text-text"
         >
           Create an account
         </Link>
       </p>
 
-      <form onSubmit={onSubmit} className="glass-card mt-10 space-y-5 p-8">
+      {registered && (
+        <p className="mt-6 rounded-xl border border-accent/20 bg-accent/5 px-4 py-3 text-center text-sm text-accent">
+          Account created. Log in with your email and password.
+        </p>
+      )}
+      {reset && (
+        <p className="mt-6 rounded-xl border border-accent/20 bg-accent/5 px-4 py-3 text-center text-sm text-accent">
+          Password updated. You can log in with your new password.
+        </p>
+      )}
+
+      <form
+        onSubmit={onSubmit}
+        className="mt-10 space-y-5 rounded-2xl border border-white/6 bg-[var(--surface-1)] p-8"
+      >
         <label className="block text-sm">
           <span className="text-muted">Email</span>
           <input
             type="email"
             required
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1.5 w-full rounded-xl border border-[var(--glass-border)] bg-white/60 px-4 py-3 text-text outline-none focus:border-accent"
+            className="input-premium mt-1.5"
           />
         </label>
         <label className="block text-sm">
-          <span className="text-muted">Password</span>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-muted">Password</span>
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium text-accent hover:text-text"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <div className="relative mt-1.5">
             <input
               type={showPassword ? "text" : "password"}
               required
               minLength={6}
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-[var(--glass-border)] bg-white/60 px-4 py-3 pr-12 text-text outline-none focus:border-accent"
+              className="input-premium pr-12"
             />
             <button
               type="button"
@@ -109,7 +158,7 @@ export function LoginForm() {
             </button>
           </div>
         </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-400">{error}</p>}
         <MagneticButton
           type="submit"
           variant="primary"

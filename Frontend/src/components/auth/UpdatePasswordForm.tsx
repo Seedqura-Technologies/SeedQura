@@ -1,30 +1,71 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { postJson } from "@/lib/api";
 import { Logo } from "@/components/ui/Logo";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 
-function safeNext(raw: string | null): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/dashboard";
-  return raw;
-}
-
-export function SignupForm() {
+export function UpdatePasswordForm() {
   const router = useRouter();
-  const search = useSearchParams();
-  const next = safeNext(search.get("next"));
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    if (!supabase) {
+      setError("Auth is not configured");
+      setReady(true);
+      return;
+    }
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY" && !cancelled) {
+        setHasSession(true);
+        setReady(true);
+      }
+    });
+
+    (async () => {
+      // Support older hash-based recovery links (#access_token=…&type=recovery)
+      if (typeof window !== "undefined" && window.location.hash.includes("type=recovery")) {
+        const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+        const access_token = hash.get("access_token");
+        const refresh_token = hash.get("refresh_token");
+        if (access_token && refresh_token) {
+          const { error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+          if (!cancelled) {
+            setHasSession(!error);
+            setReady(true);
+            window.history.replaceState(null, "", window.location.pathname);
+          }
+          return;
+        }
+      }
+
+      const { data } = await supabase.auth.getSession();
+      if (!cancelled) {
+        setHasSession(Boolean(data.session));
+        setReady(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -39,38 +80,48 @@ export function SignupForm() {
     }
     setLoading(true);
     try {
-      await postJson("/api/student/register", {
-        email: email.trim(),
-        password,
-        fullName: fullName.trim(),
-      });
-
       const supabase = createClient();
-      if (!supabase) {
-        router.push(`/login?next=${encodeURIComponent(next)}&registered=1`);
-        return;
-      }
-      const { error: loginErr } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
-      if (loginErr) {
-        router.push(`/login?next=${encodeURIComponent(next)}&registered=1`);
-        return;
-      }
-
-      router.replace(next);
+      if (!supabase) throw new Error("Auth is not configured");
+      const { error: err } = await supabase.auth.updateUser({ password });
+      if (err) throw err;
+      router.replace("/dashboard");
       router.refresh();
     } catch (err) {
-      const raw = err instanceof Error ? err.message : "Sign up failed";
-      if (/already|exists|registered/i.test(raw)) {
-        setError("An account with this email already exists. Try logging in.");
-      } else {
-        setError(raw);
-      }
+      setError(
+        err instanceof Error ? err.message : "Could not update password"
+      );
     } finally {
       setLoading(false);
     }
+  }
+
+  if (!ready) {
+    return (
+      <p className="mx-auto text-center text-muted">Loading…</p>
+    );
+  }
+
+  if (!hasSession) {
+    return (
+      <div className="mx-auto w-full max-w-md text-center">
+        <div className="mb-10 flex justify-center">
+          <Logo href="/" variant="header" />
+        </div>
+        <h1 className="text-3xl font-medium tracking-tight text-text">
+          Link expired
+        </h1>
+        <p className="mt-4 text-sm leading-relaxed text-muted">
+          This password reset link is invalid or has expired. Request a new one
+          to continue.
+        </p>
+        <Link
+          href="/forgot-password"
+          className="mt-10 inline-block text-sm font-medium text-accent hover:text-text"
+        >
+          Request a new link
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -79,16 +130,10 @@ export function SignupForm() {
         <Logo href="/" variant="header" />
       </div>
       <h1 className="text-center text-3xl font-medium tracking-tight text-text">
-        Create account
+        Choose a new password
       </h1>
       <p className="mt-3 text-center text-sm text-muted">
-        Already registered?{" "}
-        <Link
-          href={`/login?next=${encodeURIComponent(next)}`}
-          className="font-medium text-accent hover:text-text"
-        >
-          Log in
-        </Link>
+        Enter a new password for your Seedqura account.
       </p>
 
       <form
@@ -96,28 +141,7 @@ export function SignupForm() {
         className="mt-10 space-y-5 rounded-2xl border border-white/6 bg-[var(--surface-1)] p-8"
       >
         <label className="block text-sm">
-          <span className="text-muted">Full name</span>
-          <input
-            required
-            autoComplete="name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className="input-premium mt-1.5"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-muted">Email</span>
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="input-premium mt-1.5"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-muted">Password</span>
+          <span className="text-muted">New password</span>
           <div className="relative mt-1.5">
             <input
               type={showPassword ? "text" : "password"}
@@ -161,7 +185,7 @@ export function SignupForm() {
           className="w-full"
           disabled={loading}
         >
-          {loading ? "Creating…" : "Sign up"}
+          {loading ? "Saving…" : "Update password"}
         </MagneticButton>
       </form>
     </div>

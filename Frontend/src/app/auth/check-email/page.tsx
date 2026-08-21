@@ -6,9 +6,11 @@ export const metadata = { title: "Check your email — Seedqura" };
 export default async function CheckEmailPage({
   searchParams,
 }: {
-  searchParams: Promise<{ email?: string }>;
+  searchParams: Promise<{ email?: string; type?: string }>;
 }) {
-  const { email } = await searchParams;
+  const { email, type } = await searchParams;
+  const isReset = type === "reset";
+
   return (
     <main className="flex min-h-screen items-center px-4 py-28">
       <div className="mx-auto max-w-md text-center">
@@ -18,15 +20,30 @@ export default async function CheckEmailPage({
         <h1 className="text-3xl font-medium tracking-tight text-text">
           Check your email
         </h1>
-        <p className="mt-4 text-muted">
-          We sent a confirmation link
-          {email ? (
+        <p className="mt-4 text-sm leading-relaxed text-muted">
+          {isReset ? (
             <>
-              {" "}
-              to <span className="text-text">{email}</span>
+              We sent a password reset link
+              {email ? (
+                <>
+                  {" "}
+                  to <span className="text-text">{email}</span>
+                </>
+              ) : null}
+              . Open it to choose a new password.
             </>
-          ) : null}
-          . Confirm your address, then log in.
+          ) : (
+            <>
+              We sent a message
+              {email ? (
+                <>
+                  {" "}
+                  to <span className="text-text">{email}</span>
+                </>
+              ) : null}
+              . Follow the instructions there, then log in.
+            </>
+          )}
         </p>
         <Link
           href="/login"

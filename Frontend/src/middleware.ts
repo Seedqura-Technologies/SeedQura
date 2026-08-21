@@ -12,5 +12,6 @@ export const config = {
     "/enroll/:path*",
     "/login",
     "/signup",
+    "/forgot-password",
   ],
 };
