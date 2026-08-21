@@ -8,7 +8,6 @@ import { postJson } from "@/lib/api";
 export const contactSubjects = [
   "General Inquiry",
   "Partnership",
-  "Academy",
   "Research Collaboration",
 ] as const;
 

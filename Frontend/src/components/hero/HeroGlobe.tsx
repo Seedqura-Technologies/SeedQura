@@ -55,7 +55,7 @@ export function HeroGlobe() {
 
   return (
     <div ref={containerRef} className="relative mx-auto aspect-square w-full max-w-xl">
-      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-green/25 via-cyan/15 to-blue/25 blur-3xl" />
+      <div className="absolute inset-0 rounded-full blur-3xl" style={{ background: "radial-gradient(ellipse, rgba(34,211,165,0.22) 0%, transparent 70%)" }} />
 
       {floatingStats.map((stat, i) => (
         <motion.div

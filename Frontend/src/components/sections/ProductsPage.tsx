@@ -15,9 +15,9 @@ import { TextureBackground } from "@/components/effects/TextureBackground";
 import { DepthField } from "@/components/effects/DepthField";
 
 const categoryStyles: Record<string, string> = {
-  Program: "border-accent/30 text-accent bg-accent/5",
-  Course: "border-accent-warm/30 text-accent-warm bg-accent-warm/5",
-  Partnership: "border-[var(--glass-border)] text-muted bg-white/40",
+  Program:     "border-[var(--accent-border)] text-accent bg-[var(--accent-dim)]",
+  Course:      "border-[var(--accent-warm)]/20 text-[var(--accent-warm)] bg-[var(--accent-warm)]/8",
+  Partnership: "border-[var(--glass-border)] text-[var(--text-muted)] bg-white/[0.04]",
 };
 
 function usePublishedCourses() {
@@ -39,15 +39,15 @@ export function ProductsHero() {
     <section className="relative overflow-hidden pt-32 pb-20 md:pt-40 md:pb-28">
       <TextureBackground variant="section" />
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <p className="text-xs font-medium uppercase tracking-[0.25em] text-accent">
-          Products
-        </p>
-        <h1 className="mt-4 max-w-3xl text-4xl font-medium leading-[1.12] tracking-tight text-text md:text-6xl">
-          Learn from researchers building real systems
+        <span className="eyebrow-pill">
+          <span className="h-1 w-1 rounded-full bg-[var(--accent)]" />
+          Seedqura Academy
+        </span>
+        <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-[1.10] tracking-[-0.03em] text-text md:text-6xl">
+          Learn from researchers<br />building real systems
         </h1>
-        <p className="mt-8 max-w-2xl text-lg leading-relaxed text-muted md:text-xl">
-          Courses and programs in AI for agriculture and precision medicine —
-          structured, mentor-led, and designed for outcomes you can show.
+        <p className="mt-8 max-w-2xl text-lg leading-relaxed text-[var(--text-muted)] md:text-xl">
+          Courses and programs in medical AI — weekend live cohorts, outcomes you can show.
         </p>
       </div>
     </section>

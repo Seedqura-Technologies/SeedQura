@@ -38,7 +38,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <div className="relative">
               <motion.div
-                className="absolute inset-0 rounded-full bg-green/20 blur-3xl"
+                className="absolute inset-0 rounded-full blur-3xl"
+                style={{ background: "rgba(34, 211, 165, 0.18)" }}
                 animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.7, 0.4] }}
                 transition={{ duration: 2, repeat: Infinity }}
               />
@@ -87,7 +88,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <div className="mt-8 h-1 w-48 overflow-hidden rounded-full bg-white/10">
               <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-green to-blue"
+                className="h-full rounded-full"
+                style={{ background: "linear-gradient(90deg, var(--grad-a), var(--grad-c))" }}
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
                 transition={{ duration: 2.2, ease: "easeInOut" }}

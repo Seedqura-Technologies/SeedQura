@@ -1,52 +1,36 @@
 {
   "members": [
     {
-      "id": "1",
-      "name": "Team Member One",
-      "role": "Co-founder, Research Lead",
-      "bio": "Post-doctoral researcher specializing in applied AI.",
-      "image": "/images/team/placeholder-1.jpg",
-      "initials": "T1"
+      "id": "ansul",
+      "name": "Mr. Ansul",
+      "role": "Founder, Seedqura",
+      "group": "leadership",
+      "image": "/team/ansul-v2.jpg",
+      "initials": "A"
     },
     {
-      "id": "2",
-      "name": "Team Member Two",
-      "role": "Co-founder, Technology Lead",
-      "bio": "Engineer building research systems and products.",
-      "image": "/images/team/placeholder-2.jpg",
-      "initials": "T2"
+      "id": "vaibhav",
+      "name": "Dr. S. Vaibhav",
+      "role": "Chief Advisor · Strategy & Research Mentorship",
+      "group": "leadership",
+      "image": null,
+      "initials": "SV"
     },
     {
-      "id": "3",
-      "name": "Team Member Three",
-      "role": "Research Mentor",
-      "bio": "PhD researcher, medical imaging.",
-      "image": "/images/team/placeholder-3.jpg",
-      "initials": "T3"
+      "id": "sudiksha",
+      "name": "Ms. Sudiksha",
+      "role": "Research Intern · AI & Machine Learning",
+      "group": "research",
+      "image": "/team/sudiksha-v2.jpg",
+      "initials": "Su"
     },
     {
-      "id": "4",
-      "name": "Team Member Four",
-      "role": "Research Mentor",
-      "bio": "PhD researcher, agricultural AI.",
-      "image": "/images/team/placeholder-4.jpg",
-      "initials": "T4"
-    },
-    {
-      "id": "5",
-      "name": "Team Member Five",
-      "role": "Research Mentor",
-      "bio": "PhD researcher, healthcare NLP.",
-      "image": "/images/team/placeholder-5.jpg",
-      "initials": "T5"
-    },
-    {
-      "id": "6",
-      "name": "Team Member Six",
-      "role": "Operations",
-      "bio": "Program coordination and community.",
-      "image": "/images/team/placeholder-6.jpg",
-      "initials": "T6"
+      "id": "srestha",
+      "name": "Ms. Srestha",
+      "role": "Research Intern · AI & Machine Learning",
+      "group": "research",
+      "image": "/team/srestha-v2.jpg",
+      "initials": "Sr"
     }
   ]
 }

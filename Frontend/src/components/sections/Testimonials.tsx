@@ -57,20 +57,25 @@ export function Testimonials() {
               whileHover={{ scale: 1.02 }}
               className="gradient-border glass rounded-[24px] p-10 md:p-12"
             >
-              <Quote className="mb-6 h-10 w-10 text-green/50" />
-              <p className="text-lg leading-relaxed text-white/80 md:text-xl">
+              <Quote className="mb-6 h-10 w-10" style={{ color: "var(--accent-border)" }} />
+              <p className="text-lg leading-relaxed md:text-xl" style={{ color: "var(--text)" }}>
                 &ldquo;{t.quote}&rdquo;
               </p>
-              <div className="mt-8 flex items-center gap-4 border-t border-white/10 pt-8">
+              <div className="mt-8 flex items-center gap-4 pt-8" style={{ borderTop: "1px solid var(--border)" }}>
                 <motion.div
                   whileHover={{ scale: 1.1 }}
-                  className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-green/30 to-blue/30 text-lg font-bold text-white"
+                  className="flex h-14 w-14 items-center justify-center rounded-full text-lg font-bold"
+                  style={{
+                    background: "var(--accent-dim)",
+                    border: "1px solid var(--accent-border)",
+                    color: "var(--accent)",
+                  }}
                 >
                   {t.initials}
                 </motion.div>
                 <div>
-                  <p className="font-heading font-semibold text-white">{t.author}</p>
-                  <p className="text-sm text-white/50">{t.role}</p>
+                  <p className="font-semibold" style={{ color: "var(--text)" }}>{t.author}</p>
+                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>{t.role}</p>
                 </div>
               </div>
             </motion.div>
@@ -80,7 +85,8 @@ export function Testimonials() {
             <button
               type="button"
               onClick={() => setCurrent((c) => (c - 1 + testimonials.length) % testimonials.length)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl glass text-white/60 hover:text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-xl glass transition-colors hover:text-[var(--accent)]"
+              style={{ color: "var(--text-muted)" }}
               aria-label="Previous testimonial"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -91,7 +97,11 @@ export function Testimonials() {
                   key={i}
                   type="button"
                   onClick={() => setCurrent(i)}
-                  className={`h-2 rounded-full transition-all ${i === current ? "w-6 bg-green" : "w-2 bg-white/30"}`}
+                  className="h-2 rounded-full transition-all"
+                  style={{
+                    width: i === current ? "1.5rem" : "0.5rem",
+                    background: i === current ? "var(--accent)" : "var(--border-strong)",
+                  }}
                   aria-label={`Go to testimonial ${i + 1}`}
                 />
               ))}
@@ -99,7 +109,8 @@ export function Testimonials() {
             <button
               type="button"
               onClick={() => setCurrent((c) => (c + 1) % testimonials.length)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl glass text-white/60 hover:text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-xl glass transition-colors hover:text-[var(--accent)]"
+              style={{ color: "var(--text-muted)" }}
               aria-label="Next testimonial"
             >
               <ChevronRight className="h-5 w-5" />

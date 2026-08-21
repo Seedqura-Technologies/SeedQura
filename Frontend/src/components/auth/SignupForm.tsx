@@ -32,6 +32,12 @@ export function SignupForm() {
       });
 
       const supabase = createClient();
+      if (!supabase) {
+        router.push(
+          `/login?next=${encodeURIComponent(next)}&registered=1`
+        );
+        return;
+      }
       const { error: loginErr } = await supabase.auth.signInWithPassword({
         email,
         password,

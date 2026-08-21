@@ -19,25 +19,31 @@ export function Partners() {
         <SectionHeading light label="Partners" title="Collaborating with Industry Leaders" align="center" />
       </div>
       <div className="relative mt-12">
-        <div className="absolute left-0 top-0 z-10 h-full w-24 bg-gradient-to-r from-[#F8FAFC] to-transparent" />
-        <div className="absolute right-0 top-0 z-10 h-full w-24 bg-gradient-to-l from-[#F8FAFC] to-transparent" />
+        {/* Fade edges — must match section background */}
+        <div
+          className="absolute left-0 top-0 z-10 h-full w-24 pointer-events-none"
+          style={{ background: "linear-gradient(to right, var(--surface-1), transparent)" }}
+        />
+        <div
+          className="absolute right-0 top-0 z-10 h-full w-24 pointer-events-none"
+          style={{ background: "linear-gradient(to left, var(--surface-1), transparent)" }}
+        />
         <div className="flex animate-marquee gap-6">
           {doubled.map((name, i) => (
             <motion.div
               key={`${name}-${i}`}
               onHoverStart={() => setHovered(name)}
               onHoverEnd={() => setHovered(null)}
-              whileHover={{ scale: 1.08, y: -4 }}
-              className={`flex shrink-0 cursor-default items-center rounded-2xl border px-8 py-5 transition-all duration-300 ${
-                hovered === name
-                  ? "border-green/40 bg-white shadow-xl shadow-green/15"
-                  : "border-slate-200 bg-slate-100 grayscale"
-              }`}
+              whileHover={{ scale: 1.05, y: -3 }}
+              className="flex shrink-0 cursor-default items-center rounded-2xl px-8 py-5 transition-all duration-300"
+              style={{
+                background: hovered === name ? "var(--accent-dim)" : "var(--surface-2)",
+                border: `1px solid ${hovered === name ? "var(--accent-border)" : "var(--border)"}`,
+              }}
             >
               <span
-                className={`font-heading whitespace-nowrap text-sm font-semibold transition-colors ${
-                  hovered === name ? "text-green" : "text-navy/50"
-                }`}
+                className="whitespace-nowrap text-sm font-semibold transition-colors"
+                style={{ color: hovered === name ? "var(--accent)" : "var(--text-muted)" }}
               >
                 {name}
               </span>

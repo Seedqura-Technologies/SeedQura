@@ -9,17 +9,17 @@ const principles = [
   {
     title: "Research-first",
     description:
-      "Rigorous, publication-oriented work backed by evidence — not marketing claims.",
+      "Evidence before narrative — systems we can show, not claims we can’t defend.",
   },
   {
-    title: "Dual vertical",
+    title: "Two healthcare systems",
     description:
-      "Intelligent systems for agriculture and precision medicine, built with equal depth.",
+      "NeuroVision for cerebral vasculature. Sampoorna for women’s continuous care.",
   },
   {
-    title: "Deployment-ready",
+    title: "Deployment-minded",
     description:
-      "From lab to field to hospital — prototypes designed for real-world integration.",
+      "Built for surgeons, students, and real clinical pathways — not demos alone.",
   },
 ];
 
@@ -44,19 +44,19 @@ export function About({ variant = "section" }: AboutProps) {
               About
             </p>
             <h1 className="text-4xl font-medium leading-[1.15] tracking-tight text-text md:text-6xl">
-              Building intelligent systems for the real world
+              An independent lab for precision medicine
             </h1>
             <p className="mt-8 text-lg leading-relaxed text-muted md:text-xl">
-              Seedqura is a research-focused technology company applying AI to
-              agriculture and precision medicine — combining machine learning,
-              computer vision, and domain expertise.
+              Seedqura builds AI for cerebral vasculature and women&apos;s
+              healthcare — NeuroVision and Sampoorna — with the discipline of
+              research and the urgency of deployment.
             </p>
           </div>
         ) : (
           <SectionHeading
             label="About"
-            title="Building intelligent systems for the real world"
-            subtitle="Seedqura is a research-focused technology company applying AI to agriculture and precision medicine — combining machine learning, computer vision, and domain expertise."
+            title="An independent lab for precision medicine"
+            subtitle="Seedqura builds AI for cerebral vasculature and women's healthcare — NeuroVision and Sampoorna."
             align="center"
           />
         )}
@@ -75,8 +75,9 @@ export function About({ variant = "section" }: AboutProps) {
               Mission
             </p>
             <p className="mt-6 text-xl leading-relaxed text-text md:text-2xl">
-              To develop intelligent, evidence-based AI that improves outcomes in
-              agriculture and healthcare through research and engineering excellence.
+              Help clinicians and students see what flat imaging can&apos;t —
+              and give women one continuous place for care that is usually
+              scattered.
             </p>
           </div>
         </ScrollReveal>

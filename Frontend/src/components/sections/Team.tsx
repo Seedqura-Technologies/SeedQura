@@ -41,31 +41,42 @@ export function Team() {
               >
                 <motion.div
                   animate={{ scale: hovered === member.id ? 1.1 : 1 }}
-                  className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-green/30 to-blue/30 text-xl font-bold text-white"
+                  className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full text-xl font-bold"
+                  style={{
+                    background: "linear-gradient(135deg, var(--accent-dim) 0%, rgba(34,211,165,0.18) 100%)",
+                    border: "1px solid var(--accent-border)",
+                    color: "var(--accent)",
+                  }}
                 >
                   {member.initials}
                 </motion.div>
-                <h3 className="font-heading text-lg font-bold text-white">{member.name}</h3>
-                <p className="mt-1 text-sm font-medium text-green">{member.role}</p>
-                <p className="mt-2 text-sm text-white/50">{member.bio}</p>
+                <h3 className="text-lg font-semibold" style={{ color: "var(--text)" }}>{member.name}</h3>
+                <p className="mt-1 text-sm font-medium" style={{ color: "var(--accent)" }}>{member.role}</p>
 
                 <motion.div
                   initial={false}
                   animate={{ height: hovered === member.id ? "auto" : 0, opacity: hovered === member.id ? 1 : 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-4 flex flex-wrap justify-center gap-2 border-t border-white/10 pt-4">
+                  <div
+                    className="mt-4 flex flex-wrap justify-center gap-2 pt-4"
+                    style={{ borderTop: "1px solid var(--border)" }}
+                  >
                     {(skillsMap[member.id] || []).map((skill) => (
-                      <span key={skill} className="rounded-full bg-white/10 px-2 py-1 text-xs text-white/70">
+                      <span
+                        key={skill}
+                        className="rounded-full px-2 py-1 text-xs"
+                        style={{ background: "var(--surface-3)", color: "var(--text-muted)" }}
+                      >
                         {skill}
                       </span>
                     ))}
                   </div>
                   <div className="mt-3 flex justify-center gap-3">
-                    <span className="flex items-center gap-1 text-xs text-white/40">
+                    <span className="flex items-center gap-1 text-xs" style={{ color: "var(--text-faint)" }}>
                       <Share2 className="h-3 w-3" /> LinkedIn
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-white/40">
+                    <span className="flex items-center gap-1 text-xs" style={{ color: "var(--text-faint)" }}>
                       <Mail className="h-3 w-3" /> Email
                     </span>
                   </div>

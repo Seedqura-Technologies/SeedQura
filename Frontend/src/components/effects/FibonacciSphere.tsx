@@ -23,7 +23,7 @@ import * as THREE from "three";
  */
 
 const GOLDEN_ANGLE = 137.507764 * (Math.PI / 180);
-const PARTICLE_COUNT = 3400;
+const PARTICLE_COUNT = 1600;
 const SPHERE_RADIUS = 1.05;
 
 // Fallback world X when no DOM anchor is available yet.
@@ -368,22 +368,23 @@ export function FibonacciSphere({
       aria-hidden
     >
       <Canvas
-        gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
-        dpr={[1, 1.75]}
+        gl={{ alpha: true, antialias: false, powerPreference: "high-performance" }}
+        dpr={[1, 1.5]}
         camera={{ fov: 40, near: 0.1, far: 30, position: [0, 0, 5.8] }}
         style={{ background: "transparent", pointerEvents: "none" }}
+        frameloop="always"
       >
         <Suspense fallback={null}>
           <ambientLight intensity={0.15} />
           <ParticleField pointerRef={pointerRef} anchorRef={anchorRef} />
           <SoftCamera />
-          <EffectComposer multisampling={4}>
+          <EffectComposer multisampling={0}>
             <Bloom
-              intensity={0.8}
-              luminanceThreshold={0.15}
-              luminanceSmoothing={0.9}
+              intensity={0.55}
+              luminanceThreshold={0.20}
+              luminanceSmoothing={0.85}
               mipmapBlur
-              radius={0.55}
+              radius={0.45}
             />
           </EffectComposer>
         </Suspense>

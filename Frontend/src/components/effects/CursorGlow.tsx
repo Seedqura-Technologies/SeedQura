@@ -26,12 +26,17 @@ export function CursorGlow() {
   return (
     <>
       <motion.div
-        className="pointer-events-none fixed z-[9999] hidden h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-green/5 blur-2xl md:block"
+        className="pointer-events-none fixed z-[9999] hidden h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl md:block"
+        style={{ background: "rgba(62,207,142,0.07)" }}
         animate={{ x: pos.x, y: pos.y }}
         transition={{ type: "spring", stiffness: 120, damping: 25 }}
       />
       <motion.div
-        className="pointer-events-none fixed z-[9999] hidden h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-green/40 bg-green/10 mix-blend-screen md:block"
+        className="pointer-events-none fixed z-[9999] hidden h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full mix-blend-screen md:block"
+        style={{
+          border: "1px solid rgba(62,207,142,0.45)",
+          background: "rgba(62,207,142,0.12)",
+        }}
         animate={{ x: pos.x, y: pos.y }}
         transition={{ type: "spring", stiffness: 500, damping: 28, mass: 0.4 }}
       />

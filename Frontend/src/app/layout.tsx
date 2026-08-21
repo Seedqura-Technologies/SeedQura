@@ -3,9 +3,9 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Seedqura — Intelligent Agriculture × Precision Medicine",
+  title: "Seedqura — AI for precision medicine",
   description:
-    "A research-first technology company building intelligent AI for agriculture and precision medicine.",
+    "Independent research lab building NeuroVision for cerebral vasculature and Sampoorna for women's healthcare.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL || "https://www.seedqura.com"
   ),
@@ -15,9 +15,9 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
   },
   openGraph: {
-    title: "Seedqura — Intelligent Agriculture × Precision Medicine",
+    title: "Seedqura — AI for precision medicine",
     description:
-      "Research-driven AI for agriculture and healthcare — from field to hospital.",
+      "NeuroVision for cerebral vessels and aneurysms. Sampoorna for women's health. Research that ships.",
     siteName: "Seedqura",
     images: [
       {
@@ -31,9 +31,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Seedqura — Intelligent Agriculture × Precision Medicine",
+    title: "Seedqura — AI for precision medicine",
     description:
-      "Research-driven AI for agriculture and healthcare — from field to hospital.",
+      "NeuroVision for cerebral vessels and aneurysms. Sampoorna for women's health.",
     images: ["/og.png"],
   },
 };
@@ -48,8 +48,8 @@ export default function RootLayout({
       <head>
         <style>{`
           html, body {
-            background-color: #f4f2ef;
-            color: #1c1714;
+            background-color: #080808;
+            color: #F2F2EF;
           }
         `}</style>
       </head>

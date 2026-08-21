@@ -4,6 +4,7 @@ const API_URL = process.env.NEXT_PUBLIC_SITE_URL || "";
 
 export async function getAccessToken(): Promise<string | null> {
   const supabase = createClient();
+  if (!supabase) return null;
   const { data } = await supabase.auth.getSession();
   if (data.session?.access_token) return data.session.access_token;
 

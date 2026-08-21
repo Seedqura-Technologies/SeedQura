@@ -14,6 +14,30 @@ const nextConfig: NextConfig = {
   distDir: cacheDir,
   // Explicit empty turbopack config so `next build` works alongside webpack watchOptions.
   turbopack: {},
+
+  // Compiler optimizations
+  compiler: {
+    // Remove console.log in production
+    removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
+  },
+
+  // Image optimization
+  images: {
+    formats: ["image/avif", "image/webp"],
+  },
+
+  // Experimental perf flags
+  experimental: {
+    // Optimize package imports so only used exports are bundled
+    optimizePackageImports: [
+      "framer-motion",
+      "lucide-react",
+      "@react-three/fiber",
+      "@react-three/drei",
+      "@react-three/postprocessing",
+    ],
+  },
+
   webpack: (config, { dev }) => {
     if (dev) {
       config.watchOptions = {

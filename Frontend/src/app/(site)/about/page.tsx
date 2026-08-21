@@ -5,7 +5,7 @@ import { TeamSection } from "@/components/sections/TeamSection";
 export const metadata: Metadata = {
   title: "About — Seedqura",
   description:
-    "Learn about Seedqura — a research-first technology company building intelligent AI for agriculture and precision medicine.",
+    "Seedqura — independent research lab for precision medicine. NeuroVision and Sampoorna.",
 };
 
 export default function AboutPage() {

@@ -6,7 +6,6 @@ import { TextureBackground } from "@/components/effects/TextureBackground";
 const footerLinks = [
   { label: "Home", href: "/" },
   { label: "About", href: "/about" },
-  { label: "Products", href: "/products" },
   { label: "Research", href: "/research" },
   { label: "Contact", href: "/#contact" },
 ];
@@ -60,11 +59,6 @@ export function Footer() {
                 </a>
               </li>
               <li>{site.location}</li>
-              <li>
-                <Link href="/apply" className="transition-colors hover:text-accent">
-                  Apply to Academy
-                </Link>
-              </li>
             </ul>
           </div>
         </div>

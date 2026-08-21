@@ -1,54 +1,107 @@
 "use client";
 
+import Image from "next/image";
 import { getTeamMembers } from "@/lib/data";
-import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ScrollReveal } from "@/components/motion/ScrollReveal";
 
-const skillsMap: Record<string, string[]> = {
-  "1": ["Applied AI", "Research", "Publications"],
-  "2": ["Systems", "MLOps", "Product"],
-  "3": ["Medical Imaging", "CV", "Deep Learning"],
-  "4": ["Agricultural AI", "Remote Sensing", "GIS"],
-  "5": ["Healthcare NLP", "Clinical AI", "LLMs"],
-  "6": ["Operations", "Community", "Programs"],
-};
+const GROUPS = [
+  {
+    id: "leadership",
+    label: "Leadership",
+    title: "Founder & advisor",
+  },
+  {
+    id: "research",
+    label: "Research",
+    title: "Research team",
+  },
+] as const;
+
+function MemberCard({
+  member,
+}: {
+  member: ReturnType<typeof getTeamMembers>[number];
+}) {
+  return (
+    <article className="mx-auto flex h-full w-full max-w-[200px] flex-col items-center text-center">
+      <div className="relative mb-5 aspect-square w-full overflow-hidden rounded-2xl bg-white/4 ring-1 ring-white/8">
+        {member.image ? (
+          <Image
+            src={member.image}
+            alt={member.name}
+            fill
+            sizes="200px"
+            quality={88}
+            unoptimized
+            className="object-cover object-[center_18%]"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-white/6 to-transparent">
+            <span className="text-2xl font-medium tracking-wide text-muted">
+              {member.initials}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <h3 className="text-base font-medium tracking-tight text-text sm:text-lg">
+        {member.name}
+      </h3>
+      <p className="mt-2 min-h-[2.75rem] text-sm leading-snug text-muted">
+        {member.role}
+      </p>
+    </article>
+  );
+}
 
 export function TeamSection() {
   const members = getTeamMembers();
 
   return (
-    <section className="section-padding relative">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <SectionHeading
-          label="Team"
-          title="The minds behind Seedqura"
-          subtitle="Researchers, engineers, and innovators driving the future of AI in agriculture and medicine."
-          align="center"
-        />
+    <section className="section-padding relative border-t border-white/6">
+      <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        <ScrollReveal>
+          <div className="max-w-xl">
+            <p className="mb-4 text-xs font-medium uppercase tracking-[0.25em] text-accent">
+              People
+            </p>
+            <h2 className="text-3xl font-medium tracking-tight text-text md:text-4xl">
+              The team
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-muted md:text-lg">
+              Research and product — a small group building Seedqura.
+            </p>
+          </div>
+        </ScrollReveal>
 
-        <div className="mt-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {members.map((member, i) => (
-            <ScrollReveal key={member.id} delay={i * 0.08}>
-              <article className="glass-card flex h-full flex-col p-8 text-center">
-                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-accent/10 text-lg font-medium text-accent">
-                  {member.initials}
-                </div>
-                <h3 className="text-lg font-medium text-text">{member.name}</h3>
-                <p className="mt-1 text-sm font-medium text-accent">{member.role}</p>
-                <p className="mt-3 text-sm leading-relaxed text-muted">{member.bio}</p>
-                <div className="mt-5 flex flex-wrap justify-center gap-2">
-                  {(skillsMap[member.id] || []).map((skill) => (
-                    <span
-                      key={skill}
-                      className="rounded-full border border-[var(--glass-border)] bg-white/40 px-2.5 py-1 text-xs text-muted"
-                    >
-                      {skill}
-                    </span>
+        <div className="mt-20 space-y-20">
+          {GROUPS.map((group) => {
+            const groupMembers = members.filter((m) => m.group === group.id);
+            if (!groupMembers.length) return null;
+
+            return (
+              <div key={group.id}>
+                <ScrollReveal>
+                  <div className="mb-10 text-center">
+                    <p className="text-xs font-medium uppercase tracking-[0.25em] text-accent">
+                      {group.label}
+                    </p>
+                    <h3 className="mt-3 text-xl font-medium tracking-tight text-text md:text-2xl">
+                      {group.title}
+                    </h3>
+                  </div>
+                </ScrollReveal>
+
+                <div className="mx-auto grid max-w-2xl grid-cols-1 gap-x-12 gap-y-12 sm:grid-cols-2">
+                  {groupMembers.map((member, i) => (
+                    <ScrollReveal key={member.id} delay={i * 0.06}>
+                      <MemberCard member={member} />
+                    </ScrollReveal>
                   ))}
                 </div>
-              </article>
-            </ScrollReveal>
-          ))}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

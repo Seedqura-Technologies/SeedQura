@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { GraduationCap, Menu, X } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { Footer } from "@/components/layout/Footer";
@@ -11,10 +11,9 @@ import { PageTransition } from "@/components/motion/PageTransition";
 import { createClient } from "@/lib/supabase/client";
 
 const pageLinks = [
-  { label: "Home", href: "/" },
-  { label: "About", href: "/about" },
-  { label: "Products", href: "/products" },
+  { label: "Home",     href: "/" },
   { label: "Research", href: "/research" },
+  { label: "About",    href: "/about" },
 ];
 
 type SiteShellProps = {
@@ -42,6 +41,7 @@ export function SiteShell({ children }: SiteShellProps) {
 
   useEffect(() => {
     const supabase = createClient();
+    if (!supabase) return;
     supabase.auth.getUser().then(async ({ data }) => {
       const user = data.user;
       setUserEmail(user?.email ?? null);
@@ -64,7 +64,7 @@ export function SiteShell({ children }: SiteShellProps) {
 
   async function logout() {
     const supabase = createClient();
-    await supabase.auth.signOut();
+    if (supabase) await supabase.auth.signOut();
     setUserEmail(null);
     setRole(null);
     router.push("/");
@@ -83,7 +83,9 @@ export function SiteShell({ children }: SiteShellProps) {
       <header className="fixed top-0 left-0 right-0 z-50 px-4 pt-4 sm:px-6">
         <div
           className={`mx-auto flex max-w-6xl items-center justify-between rounded-2xl px-4 py-3 transition-all duration-300 sm:px-6 ${
-            scrolled ? "glass-light shadow-lg" : "bg-transparent"
+            scrolled
+              ? "glass-light shadow-lg shadow-black/50"
+              : "bg-transparent"
           }`}
         >
           <Logo href="/" variant="header" />
@@ -104,6 +106,16 @@ export function SiteShell({ children }: SiteShellProps) {
                 </Link>
               );
             })}
+
+            {/* Academy — separate product, minimal pill */}
+            <Link
+              href="/academy"
+              title="Seedqura Academy — courses & programs"
+              className="ml-2 flex items-center gap-1.5 rounded-full border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-all hover:bg-[var(--accent)] hover:text-black"
+            >
+              <GraduationCap className="h-3.5 w-3.5" />
+              Academy
+            </Link>
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
@@ -162,16 +174,26 @@ export function SiteShell({ children }: SiteShellProps) {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`rounded-lg px-4 py-3 text-sm ${
+                    className={`rounded-lg px-4 py-3 text-sm transition-colors ${
                       isActive
-                        ? "bg-white/60 text-text"
-                        : "text-muted hover:text-text"
+                        ? "bg-white/[0.07] text-text"
+                        : "text-[var(--text-muted)] hover:text-text"
                     }`}
                   >
                     {link.label}
                   </Link>
                 );
               })}
+              {/* Academy pill — mobile */}
+              <Link
+                href="/academy"
+                onClick={() => setMenuOpen(false)}
+                className="mt-1 flex items-center gap-2 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-dim)] px-4 py-3 text-sm font-semibold text-[var(--accent)]"
+              >
+                <GraduationCap className="h-4 w-4" />
+                Academy — Courses & Programs
+              </Link>
+
               <div className="mt-2 flex flex-col gap-2 px-2">
                 {userEmail ? (
                   <>

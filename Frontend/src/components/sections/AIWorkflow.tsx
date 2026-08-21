@@ -43,7 +43,7 @@ export function AIWorkflow() {
         <ScrollReveal className="mt-16">
           <div className="hidden lg:block">
             <div className="relative flex items-start justify-between gap-2">
-              <div className="absolute left-0 right-0 top-8 h-px bg-gradient-to-r from-green/0 via-green/50 to-blue/0" />
+              <div className="absolute left-0 right-0 top-8 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--accent-border), transparent)" }} />
               {pipeline.map((step, i) => {
                 const Icon = step.icon;
                 const isActive = active === i;

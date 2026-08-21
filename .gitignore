@@ -34,3 +34,23 @@ Frontend/public/logo-original.png
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# macOS AppleDouble / resource forks
+._*
+**/._*
+
+# Local source media at repo root (site uses Frontend/public optimized assets)
+/*.heic
+/*.HEIC
+/Ansul.heic
+/IMG_0524.HEIC
+/Srestha.jpg
+/Sudiksha.pdf
+/ScreenRecording*.MP4
+/sampoorna-product-walkthrough-vo.mp4
+
+# Team processing scratch / backups
+Frontend/public/team/.work/
+Frontend/public/team/ansul-cutout.png
+Frontend/public/team/ansul-rembg-backup.jpg
+Frontend/public/team/ansul@2x.jpg

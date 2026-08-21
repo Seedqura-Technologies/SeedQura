@@ -8,7 +8,6 @@ export function TeamCard({ member }: { member: TeamMember }) {
       </div>
       <h3 className="text-lg font-bold text-text-primary">{member.name}</h3>
       <p className="mt-1 text-sm font-medium text-primary">{member.role}</p>
-      <p className="mt-2 text-sm text-text-muted">{member.bio}</p>
     </div>
   );
 }
