@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { postJson } from "@/lib/api";
 import { Logo } from "@/components/ui/Logo";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { LegalConsentCheckbox } from "@/components/legal/LegalConsentCheckbox";
 
 function safeNext(raw: string | null): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/dashboard";
@@ -23,12 +24,19 @@ export function SignupForm() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [consentError, setConsentError] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+    setConsentError("");
+    if (!acceptedTerms) {
+      setConsentError("Please accept the Terms of Service and Privacy Policy to continue.");
+      return;
+    }
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
       return;
@@ -154,6 +162,13 @@ export function SignupForm() {
             />
           </label>
           {error && <p className="text-sm text-red-400">{error}</p>}
+          <LegalConsentCheckbox
+            id="signup-terms"
+            variant="terms"
+            checked={acceptedTerms}
+            onChange={setAcceptedTerms}
+            error={consentError}
+          />
           <div className="pt-2">
             <MagneticButton
               type="submit"

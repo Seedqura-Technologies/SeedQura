@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { LegalConsentCheckbox } from "@/components/legal/LegalConsentCheckbox";
 import { postJson } from "@/lib/api";
 
 const yearOptions = [
@@ -42,6 +43,8 @@ export function ApplyForm() {
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [consentError, setConsentError] = useState("");
   const [success, setSuccess] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -78,6 +81,11 @@ export function ApplyForm() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError("");
+    setConsentError("");
+    if (!acceptedTerms) {
+      setConsentError("Please accept the Terms of Service and Privacy Policy to apply.");
+      return;
+    }
     const nextErrors = validate();
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -246,6 +254,14 @@ export function ApplyForm() {
       </div>
 
       {formError && <p className="text-sm text-red-600">{formError}</p>}
+
+      <LegalConsentCheckbox
+        id="apply-terms"
+        variant="terms"
+        checked={acceptedTerms}
+        onChange={setAcceptedTerms}
+        error={consentError}
+      />
 
       <MagneticButton type="submit" variant="primary" disabled={loading} className="w-full">
         {loading ? (

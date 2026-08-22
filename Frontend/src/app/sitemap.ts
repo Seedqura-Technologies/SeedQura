@@ -1,14 +1,28 @@
 import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = "https://seedqura.in";
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+    "https://www.seedqura.com";
   const lastModified = new Date();
 
-  return [
-    { url: base, lastModified, changeFrequency: "monthly", priority: 1 },
-    { url: `${base}/about`, lastModified, changeFrequency: "monthly", priority: 0.9 },
-    { url: `${base}/products`, lastModified, changeFrequency: "monthly", priority: 0.9 },
-    { url: `${base}/research`, lastModified, changeFrequency: "monthly", priority: 0.9 },
-    { url: `${base}/apply`, lastModified, changeFrequency: "monthly", priority: 0.8 },
+  const pages = [
+    "",
+    "/about",
+    "/research",
+    "/academy",
+    "/apply",
+    "/privacy",
+    "/terms",
+    "/cookies",
+    "/refund-policy",
+    "/disclaimer",
   ];
+
+  return pages.map((path, i) => ({
+    url: `${base}${path}`,
+    lastModified,
+    changeFrequency: path.startsWith("/privacy") || path.startsWith("/terms") ? "yearly" as const : "monthly" as const,
+    priority: path === "" ? 1 : path.match(/^\/(privacy|terms|cookies|refund|disclaimer)/) ? 0.5 : 0.8,
+  }));
 }

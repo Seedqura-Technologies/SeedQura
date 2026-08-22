@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { LegalConsentCheckbox } from "@/components/legal/LegalConsentCheckbox";
 import { postJson } from "@/lib/api";
 
 export const contactSubjects = [
@@ -36,6 +37,8 @@ export function ContactForm({ subject, onSubjectChange }: ContactFormProps) {
   });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
+  const [consent, setConsent] = useState(false);
+  const [consentError, setConsentError] = useState("");
   const [success, setSuccess] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -57,6 +60,11 @@ export function ContactForm({ subject, onSubjectChange }: ContactFormProps) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setFormError("");
+    setConsentError("");
+    if (!consent) {
+      setConsentError("Please consent to data processing before sending your message.");
+      return;
+    }
     const nextErrors = validate();
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -151,6 +159,14 @@ export function ContactForm({ subject, onSubjectChange }: ContactFormProps) {
       </div>
 
       {formError && <p className="text-sm text-red-600">{formError}</p>}
+
+      <LegalConsentCheckbox
+        id="contact-consent"
+        variant="contact"
+        checked={consent}
+        onChange={setConsent}
+        error={consentError}
+      />
 
       <MagneticButton type="submit" variant="primary" disabled={loading} className="w-full sm:w-auto">
         {loading ? (

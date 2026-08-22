@@ -5,6 +5,7 @@ import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { MagneticButton } from "@/components/ui/MagneticButton";
+import { LegalConsentCheckbox } from "@/components/legal/LegalConsentCheckbox";
 
 declare global {
   interface Window {
@@ -16,14 +17,21 @@ type Props = { courseId: string };
 
 export function EnrollClient({ courseId }: Props) {
   const router = useRouter();
-  const [status, setStatus] = useState("Preparing checkout…");
+  const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [consentError, setConsentError] = useState("");
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
+    if (!started || !acceptedTerms) return;
+
     let cancelled = false;
 
     async function start() {
+      setStatus("Preparing checkout…");
+      setError("");
       try {
         const order = await apiFetch("/payments/order", {
           method: "POST",
@@ -132,7 +140,51 @@ export function EnrollClient({ courseId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [courseId, router]);
+  }, [courseId, router, started, acceptedTerms]);
+
+  function beginCheckout() {
+    setConsentError("");
+    if (!acceptedTerms) {
+      setConsentError("Please accept the terms and policies before continuing to payment.");
+      return;
+    }
+    setStarted(true);
+  }
+
+  if (!started) {
+    return (
+      <div className="mx-auto max-w-lg">
+        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
+        <h1 className="text-center text-3xl font-medium tracking-tight text-text">
+          Enroll
+        </h1>
+        <p className="mt-4 text-center text-sm leading-relaxed text-muted">
+          Before payment, review and accept our policies. Checkout uses Razorpay
+          and may set third-party cookies as described in our Cookie Policy.
+        </p>
+        <div className="mt-8 space-y-5 rounded-2xl border border-white/8 bg-[var(--surface-1)] p-6">
+          <LegalConsentCheckbox
+            id="enroll-terms"
+            variant="enroll"
+            checked={acceptedTerms}
+            onChange={setAcceptedTerms}
+            error={consentError}
+          />
+          <MagneticButton
+            type="button"
+            variant="primary"
+            className="w-full"
+            onClick={beginCheckout}
+          >
+            Continue to payment
+          </MagneticButton>
+          <MagneticButton href="/academy" variant="secondary" className="w-full">
+            Back to Academy
+          </MagneticButton>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-lg text-center">
@@ -142,8 +194,8 @@ export function EnrollClient({ courseId }: Props) {
       {error && (
         <div className="mt-8 space-y-4">
           <p className="text-red-600">{error}</p>
-          <MagneticButton href="/products" variant="secondary">
-            Back to products
+          <MagneticButton href="/academy" variant="secondary">
+            Back to Academy
           </MagneticButton>
         </div>
       )}

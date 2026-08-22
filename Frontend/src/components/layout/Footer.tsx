@@ -10,6 +10,14 @@ const footerLinks = [
   { label: "Contact", href: "/#contact" },
 ];
 
+const legalLinks = [
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Service", href: "/terms" },
+  { label: "Cookie Policy", href: "/cookies" },
+  { label: "Refund Policy", href: "/refund-policy" },
+  { label: "Disclaimer", href: "/disclaimer" },
+];
+
 export function Footer() {
   const site = getSiteData();
   const year = new Date().getFullYear();
@@ -19,7 +27,7 @@ export function Footer() {
       <TextureBackground variant="footer" />
 
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-12 md:grid-cols-3">
+        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <Logo href="/" variant="footer" />
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-muted">
@@ -33,6 +41,24 @@ export function Footer() {
             </h4>
             <ul className="space-y-2">
               {footerLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-muted transition-colors hover:text-text"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="mb-4 text-xs font-medium uppercase tracking-[0.2em] text-muted">
+              Legal
+            </h4>
+            <ul className="space-y-2">
+              {legalLinks.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
@@ -65,7 +91,7 @@ export function Footer() {
 
         <div className="mt-16 border-t border-[var(--glass-border)] pt-8">
           <p className="text-center text-sm text-muted">
-            © {year} {site.name}. All rights reserved.
+            © {year} Seedqura Technologies LLP. All rights reserved.
           </p>
         </div>
       </div>

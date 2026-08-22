@@ -63,12 +63,20 @@ export default function AcademyPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-4 text-xs text-[var(--text-faint)] sm:flex-row">
             <span>© {new Date().getFullYear()} Seedqura Technologies LLP</span>
-            <Link
-              href="/"
-              className="transition-colors hover:text-[var(--accent)]"
-            >
-              ← Return to Seedqura Research
-            </Link>
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+              <Link href="/terms" className="transition-colors hover:text-[var(--accent)]">
+                Terms
+              </Link>
+              <Link href="/privacy" className="transition-colors hover:text-[var(--accent)]">
+                Privacy
+              </Link>
+              <Link href="/refund-policy" className="transition-colors hover:text-[var(--accent)]">
+                Refunds
+              </Link>
+              <Link href="/" className="transition-colors hover:text-[var(--accent)]">
+                ← Research
+              </Link>
+            </div>
           </div>
         </div>
       </footer>

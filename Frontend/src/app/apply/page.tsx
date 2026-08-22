@@ -41,6 +41,13 @@ export default function ApplyPage() {
           <div className="glass-card mt-12 p-6 md:p-10">
             <ApplyForm />
           </div>
+          <p className="mt-8 text-center text-xs text-muted">
+            <Link href="/privacy" className="hover:text-accent">Privacy</Link>
+            {" · "}
+            <Link href="/terms" className="hover:text-accent">Terms</Link>
+            {" · "}
+            <Link href="/refund-policy" className="hover:text-accent">Refunds</Link>
+          </p>
         </div>
       </main>
     </div>

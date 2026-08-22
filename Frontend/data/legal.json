@@ -1,0 +1,21 @@
+{
+  "entity": {
+    "brandName": "Seedqura",
+    "legalName": "Seedqura Technologies LLP",
+    "jurisdiction": "India",
+    "registeredOffice": "India",
+    "website": "https://www.seedqura.com"
+  },
+  "contacts": {
+    "general": "gethelp.seedqura@gmail.com",
+    "privacy": "seedqura@gmail.com",
+    "grievance": "seedqura@gmail.com"
+  },
+  "grievanceOfficer": {
+    "title": "Grievance Officer",
+    "email": "seedqura@gmail.com",
+    "responseDays": 30
+  },
+  "lastUpdated": "2026-08-22",
+  "consentVersion": "2026-08-22-v1"
+}
