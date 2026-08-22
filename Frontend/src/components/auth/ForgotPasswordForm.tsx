@@ -43,71 +43,78 @@ export function ForgotPasswordForm() {
     }
   }
 
-  if (sent) {
-    return (
-      <div className="mx-auto w-full max-w-md text-center">
-        <div className="mb-10 flex justify-center">
-          <Logo href="/" variant="header" />
-        </div>
-        <h1 className="text-3xl font-medium tracking-tight text-text">
-          Check your email
-        </h1>
-        <p className="mt-4 text-sm leading-relaxed text-muted">
-          If an account exists for{" "}
-          <span className="text-text">{email.trim()}</span>, we sent a link to
-          reset your password. The link expires after a short time.
-        </p>
-        <Link
-          href="/login"
-          className="mt-10 inline-block text-sm font-medium text-accent transition-colors hover:text-text"
-        >
-          Back to login
-        </Link>
-      </div>
-    );
-  }
-
   return (
-    <div className="mx-auto w-full max-w-md">
-      <div className="mb-10 flex justify-center">
-        <Logo href="/" variant="header" />
+    <div className="mx-auto w-full max-w-[26rem]">
+      <div className="rounded-2xl border border-white/8 bg-[var(--surface-1)] px-7 py-9 sm:px-9 sm:py-10">
+        <div className="flex justify-center">
+          <Logo href="/" variant="auth" />
+        </div>
+
+        {sent ? (
+          <>
+            <h1 className="mt-7 text-center text-2xl font-medium tracking-tight text-text">
+              Check your email
+            </h1>
+            <p className="mt-3 text-center text-sm leading-relaxed text-muted">
+              If an account exists for{" "}
+              <span className="text-text">{email.trim()}</span>, we sent a link
+              to reset your password.
+            </p>
+            <p className="mt-8 text-center text-sm">
+              <Link
+                href="/login"
+                className="font-medium text-accent hover:text-text"
+              >
+                Back to login
+              </Link>
+            </p>
+          </>
+        ) : (
+          <>
+            <h1 className="mt-7 text-center text-2xl font-medium tracking-tight text-text">
+              Reset password
+            </h1>
+            <p className="mt-2 text-center text-sm text-muted">
+              Enter your account email and we&apos;ll send a reset link.
+            </p>
+
+            <form onSubmit={onSubmit} className="mt-8 space-y-4">
+              <label className="block text-sm">
+                <span className="text-muted">Email</span>
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input-premium mt-1.5"
+                  placeholder="you@email.com"
+                />
+              </label>
+              {error && <p className="text-sm text-red-400">{error}</p>}
+              <div className="pt-2">
+                <MagneticButton
+                  type="submit"
+                  variant="primary"
+                  className="w-full"
+                  disabled={loading}
+                >
+                  {loading ? "Sending…" : "Send reset link"}
+                </MagneticButton>
+              </div>
+            </form>
+
+            <p className="mt-6 text-center text-sm">
+              <Link
+                href="/login"
+                className="font-medium text-accent hover:text-text"
+              >
+                Back to login
+              </Link>
+            </p>
+          </>
+        )}
       </div>
-      <h1 className="text-center text-3xl font-medium tracking-tight text-text">
-        Reset password
-      </h1>
-      <p className="mt-3 text-center text-sm text-muted">
-        Enter your account email and we&apos;ll send a reset link.
-      </p>
-
-      <form onSubmit={onSubmit} className="mt-10 space-y-5 rounded-2xl border border-white/6 bg-[var(--surface-1)] p-8">
-        <label className="block text-sm">
-          <span className="text-muted">Email</span>
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="input-premium mt-1.5"
-            placeholder="you@email.com"
-          />
-        </label>
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        <MagneticButton
-          type="submit"
-          variant="primary"
-          className="w-full"
-          disabled={loading}
-        >
-          {loading ? "Sending…" : "Send reset link"}
-        </MagneticButton>
-      </form>
-
-      <p className="mt-6 text-center text-sm text-muted">
-        <Link href="/login" className="font-medium text-accent hover:text-text">
-          Back to login
-        </Link>
-      </p>
     </div>
   );
 }

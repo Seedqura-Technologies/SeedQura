@@ -313,6 +313,9 @@ body {
     background 0.22s ease,
     border-color 0.22s ease;
 }
+.btn-premium.w-full {
+  width: 100%;
+}
 .btn-premium:hover { transform: scale(1.025); }
 
 .btn-primary {

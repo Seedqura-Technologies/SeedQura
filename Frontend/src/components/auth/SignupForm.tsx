@@ -74,96 +74,98 @@ export function SignupForm() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md">
-      <div className="mb-10 flex justify-center">
-        <Logo href="/" variant="header" />
-      </div>
-      <h1 className="text-center text-3xl font-medium tracking-tight text-text">
-        Create account
-      </h1>
-      <p className="mt-3 text-center text-sm text-muted">
-        Already registered?{" "}
-        <Link
-          href={`/login?next=${encodeURIComponent(next)}`}
-          className="font-medium text-accent hover:text-text"
-        >
-          Log in
-        </Link>
-      </p>
+    <div className="mx-auto w-full max-w-[26rem]">
+      <div className="rounded-2xl border border-white/8 bg-[var(--surface-1)] px-7 py-9 sm:px-9 sm:py-10">
+        <div className="flex justify-center">
+          <Logo href="/" variant="auth" />
+        </div>
 
-      <form
-        onSubmit={onSubmit}
-        className="mt-10 space-y-5 rounded-2xl border border-white/6 bg-[var(--surface-1)] p-8"
-      >
-        <label className="block text-sm">
-          <span className="text-muted">Full name</span>
-          <input
-            required
-            autoComplete="name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className="input-premium mt-1.5"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-muted">Email</span>
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="input-premium mt-1.5"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-muted">Password</span>
-          <div className="relative mt-1.5">
+        <h1 className="mt-7 text-center text-2xl font-medium tracking-tight text-text sm:text-[1.65rem]">
+          Create account
+        </h1>
+        <p className="mt-2 text-center text-sm text-muted">
+          Already registered?{" "}
+          <Link
+            href={`/login?next=${encodeURIComponent(next)}`}
+            className="font-medium text-accent hover:text-text"
+          >
+            Log in
+          </Link>
+        </p>
+
+        <form onSubmit={onSubmit} className="mt-8 space-y-4">
+          <label className="block text-sm">
+            <span className="text-muted">Full name</span>
+            <input
+              required
+              autoComplete="name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="input-premium mt-1.5"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-muted">Email</span>
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input-premium mt-1.5"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="text-muted">Password</span>
+            <div className="relative mt-1.5">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                minLength={6}
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-premium pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted hover:text-text"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+          </label>
+          <label className="block text-sm">
+            <span className="text-muted">Confirm password</span>
             <input
               type={showPassword ? "text" : "password"}
               required
               minLength={6}
               autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input-premium pr-12"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              className="input-premium mt-1.5"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted hover:text-text"
-              aria-label={showPassword ? "Hide password" : "Show password"}
+          </label>
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          <div className="pt-2">
+            <MagneticButton
+              type="submit"
+              variant="primary"
+              className="w-full"
+              disabled={loading}
             >
-              {showPassword ? (
-                <EyeOff className="h-5 w-5" />
-              ) : (
-                <Eye className="h-5 w-5" />
-              )}
-            </button>
+              {loading ? "Creating…" : "Sign up"}
+            </MagneticButton>
           </div>
-        </label>
-        <label className="block text-sm">
-          <span className="text-muted">Confirm password</span>
-          <input
-            type={showPassword ? "text" : "password"}
-            required
-            minLength={6}
-            autoComplete="new-password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            className="input-premium mt-1.5"
-          />
-        </label>
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        <MagneticButton
-          type="submit"
-          variant="primary"
-          className="w-full"
-          disabled={loading}
-        >
-          {loading ? "Creating…" : "Sign up"}
-        </MagneticButton>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

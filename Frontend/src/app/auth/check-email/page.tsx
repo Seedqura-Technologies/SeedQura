@@ -15,7 +15,7 @@ export default async function CheckEmailPage({
     <main className="flex min-h-screen items-center px-4 py-28">
       <div className="mx-auto max-w-md text-center">
         <div className="mb-10 flex justify-center">
-          <Logo href="/" variant="header" />
+          <Logo href="/" variant="auth" />
         </div>
         <h1 className="text-3xl font-medium tracking-tight text-text">
           Check your email

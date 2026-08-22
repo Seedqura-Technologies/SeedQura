@@ -7,7 +7,7 @@ export const LOGO_ALT = "Seedqura";
 
 type LogoProps = {
   href?: string;
-  variant?: "header" | "footer" | "hero";
+  variant?: "header" | "footer" | "hero" | "auth";
   className?: string;
   animate?: boolean;
   framed?: boolean;
@@ -15,12 +15,14 @@ type LogoProps = {
 
 const sizes = {
   header: "h-9 w-auto sm:h-10",
+  auth: "h-14 w-auto sm:h-16",
   footer: "h-12 w-auto",
   hero: "h-24 w-auto sm:h-28 md:h-32",
 };
 
 const sources = {
   header: LOGO_MARK_SRC,
+  auth: LOGO_SRC,
   footer: LOGO_MARK_SRC,
   hero: LOGO_SRC,
 } as const;
@@ -36,10 +38,10 @@ export function Logo({
     <Image
       src={sources[variant]}
       alt={LOGO_ALT}
-      width={variant === "hero" ? 320 : variant === "footer" ? 200 : 160}
-      height={variant === "hero" ? 120 : variant === "footer" ? 72 : 56}
+      width={variant === "hero" ? 320 : variant === "auth" ? 280 : variant === "footer" ? 200 : 160}
+      height={variant === "hero" ? 120 : variant === "auth" ? 96 : variant === "footer" ? 72 : 56}
       className={`object-contain ${sizes[variant]} ${animate ? "animate-logo" : ""}`}
-      priority={variant === "header" || variant === "hero"}
+      priority={variant === "header" || variant === "hero" || variant === "auth"}
       unoptimized
     />
   );

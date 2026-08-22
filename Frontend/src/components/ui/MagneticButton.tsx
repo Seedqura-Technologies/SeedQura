@@ -41,6 +41,7 @@ export function MagneticButton({
     y.set(0);
   };
 
+  const fullWidth = /\bw-full\b/.test(className);
   const base = `btn-premium ${variant === "primary" ? "btn-primary" : "btn-secondary"} disabled:cursor-not-allowed disabled:opacity-50 ${className}`;
 
   const inner = href ? (
@@ -59,7 +60,7 @@ export function MagneticButton({
       onMouseMove={onMove}
       onMouseLeave={onLeave}
       style={{ x: sx, y: sy }}
-      className="inline-flex"
+      className={fullWidth ? "flex w-full" : "inline-flex"}
       whileTap={{ scale: 0.97 }}
     >
       {inner}
