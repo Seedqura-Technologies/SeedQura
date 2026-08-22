@@ -193,7 +193,7 @@ export function EnrollClient({ courseId }: Props) {
       {status && <p className="mt-6 text-muted">{status}</p>}
       {error && (
         <div className="mt-8 space-y-4">
-          <p className="text-red-600">{error}</p>
+          <p className="text-error">{error}</p>
           <MagneticButton href="/academy" variant="secondary">
             Back to Academy
           </MagneticButton>

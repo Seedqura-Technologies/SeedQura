@@ -5,7 +5,11 @@ export const metadata = { title: "Dashboard — Seedqura" };
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<p className="p-10 text-muted">Loading…</p>}>
+    <Suspense
+      fallback={
+        <div className="dashboard-loading min-h-screen bg-bg">Loading…</div>
+      }
+    >
       <StudentDashboard />
     </Suspense>
   );

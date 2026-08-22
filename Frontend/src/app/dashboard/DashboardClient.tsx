@@ -106,7 +106,7 @@ export function StudentDashboard() {
   if (loading) {
     return (
       <DashboardShell title="Dashboard" tab={tab}>
-        <p className="text-muted">Loading…</p>
+        <p className="dashboard-loading">Loading…</p>
       </DashboardShell>
     );
   }
@@ -114,7 +114,7 @@ export function StudentDashboard() {
   if (error || !me) {
     return (
       <DashboardShell title="Dashboard" tab={tab}>
-        <p className="text-red-600">{error || "Unable to load dashboard"}</p>
+        <p className="text-error">{error || "Unable to load dashboard"}</p>
       </DashboardShell>
     );
   }
@@ -126,10 +126,8 @@ export function StudentDashboard() {
       {tab === "home" && (
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="glass-card p-8">
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-accent">
-              Welcome
-            </p>
-            <h2 className="mt-3 text-2xl font-medium text-text">
+            <p className="eyebrow-pill mb-4 inline-flex">Welcome</p>
+            <h2 className="text-2xl font-medium text-text">
               Welcome, {name}! We&apos;re glad to have you here.
             </h2>
             <p className="mt-3 text-muted">
@@ -138,22 +136,21 @@ export function StudentDashboard() {
           </div>
 
           <div className="glass-card p-8">
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
-              Profile
-            </p>
-            <p className="mt-3 text-lg text-text">
+            <p className="eyebrow-pill mb-4 inline-flex">Profile</p>
+            <p className="text-lg text-text">
               {me.profileComplete ? "Profile complete" : "Complete your profile"}
             </p>
             <p className="mt-2 text-sm text-muted">{me.profile.email}</p>
           </div>
 
           <div className="glass-card p-8">
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
-              Upcoming classes
-            </p>
-            <ul className="mt-4 space-y-3">
+            <p className="eyebrow-pill mb-4 inline-flex">Upcoming classes</p>
+            <ul className="space-y-3">
               {(me.upcomingSessions || []).slice(0, 5).map((s) => (
-                <li key={s.id} className="text-sm">
+                <li
+                  key={s.id}
+                  className="border-b border-[var(--border)] pb-3 text-sm last:border-0 last:pb-0"
+                >
                   <p className="font-medium text-text">
                     {s.title}
                     {s.course?.name ? (
@@ -189,27 +186,32 @@ export function StudentDashboard() {
           </div>
 
           <div className="glass-card p-8">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <p className="eyebrow-pill inline-flex">
                 Notifications ({me.unreadCount})
               </p>
               {me.unreadCount > 0 && (
                 <button
                   type="button"
                   onClick={markAllRead}
-                  className="text-xs font-medium text-accent"
+                  className="text-xs font-semibold text-accent transition-opacity hover:opacity-80"
                 >
                   Mark all read
                 </button>
               )}
             </div>
-            <ul className="mt-4 space-y-3">
-              {me.notifications.slice(0, 5).map((n) => (
-                <li key={n.id} className="text-sm">
+            <ul className="max-h-72 space-y-0 overflow-y-auto">
+              {me.notifications.slice(0, 8).map((n) => (
+                <li
+                  key={n.id}
+                  className="border-b border-[var(--border)] py-3 text-sm last:border-0"
+                >
                   <p className={n.read_at ? "text-muted" : "font-medium text-text"}>
                     {n.title}
                   </p>
-                  {n.body && <p className="text-muted">{n.body}</p>}
+                  {n.body && (
+                    <p className="mt-1 text-xs leading-relaxed text-muted">{n.body}</p>
+                  )}
                 </li>
               ))}
               {me.notifications.length === 0 && (
@@ -219,9 +221,7 @@ export function StudentDashboard() {
           </div>
 
           <div className="glass-card p-8 lg:col-span-2">
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted">
-              Recent activity
-            </p>
+            <p className="eyebrow-pill mb-4 inline-flex">Recent activity</p>
             <p className="mt-3 text-sm text-muted">
               {me.enrollments.length
                 ? `You have ${me.enrollments.length} enrollment(s).`
@@ -243,7 +243,7 @@ export function StudentDashboard() {
                 <p>Status: {c.display_status}</p>
               </div>
               <div className="mt-6 flex items-end justify-between gap-4">
-                <p className="text-2xl font-medium text-text">
+                <p className="text-2xl font-medium tabular-nums text-gradient">
                   {c.price_display || "—"}
                 </p>
                 {c.price_inr != null && c.price_inr > 0 ? (
