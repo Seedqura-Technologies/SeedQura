@@ -133,7 +133,7 @@ export default function AdminCoursesPage() {
 
   return (
     <AdminShell title="Courses">
-      {error && <p className="mb-4 text-red-600">{error}</p>}
+      {error && <p className="mb-4 text-error">{error}</p>}
 
       <form onSubmit={onSubmit} className="glass-card mb-10 grid gap-3 p-6 md:grid-cols-2">
         <h2 className="md:col-span-2 text-lg font-medium text-text">
@@ -145,7 +145,7 @@ export default function AdminCoursesPage() {
             placeholder="id (slug)"
             value={form.id}
             onChange={(e) => setForm({ ...form, id: e.target.value })}
-            className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+            className="input-premium"
           />
         )}
         <input
@@ -153,26 +153,26 @@ export default function AdminCoursesPage() {
           placeholder="Name"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium"
         />
         <input
           placeholder="Tagline"
           value={form.tagline}
           onChange={(e) => setForm({ ...form, tagline: e.target.value })}
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium"
         />
         <textarea
           placeholder="Description"
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
-          className="md:col-span-2 rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium md:col-span-2"
           rows={3}
         />
         <input
           placeholder="Duration"
           value={form.duration}
           onChange={(e) => setForm({ ...form, duration: e.target.value })}
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium"
         />
         <input
           placeholder="Schedule summary"
@@ -180,25 +180,25 @@ export default function AdminCoursesPage() {
           onChange={(e) =>
             setForm({ ...form, schedule_summary: e.target.value })
           }
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium"
         />
         <input
           placeholder="Price INR"
           value={form.price_inr}
           onChange={(e) => setForm({ ...form, price_inr: e.target.value })}
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium"
         />
         <input
           placeholder="Price display"
           value={form.price_display}
           onChange={(e) => setForm({ ...form, price_display: e.target.value })}
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium"
         />
         <input
           placeholder="Seat limit"
           value={form.seat_limit}
           onChange={(e) => setForm({ ...form, seat_limit: e.target.value })}
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium"
         />
         <input
           type="date"
@@ -207,18 +207,18 @@ export default function AdminCoursesPage() {
           onChange={(e) =>
             setForm({ ...form, registration_deadline: e.target.value })
           }
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium"
         />
         <input
           placeholder="Banner URL"
           value={form.banner_url}
           onChange={(e) => setForm({ ...form, banner_url: e.target.value })}
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium"
         />
         <select
           value={form.status}
           onChange={(e) => setForm({ ...form, status: e.target.value })}
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium"
         >
           <option value="draft">draft</option>
           <option value="published">published</option>
@@ -232,11 +232,8 @@ export default function AdminCoursesPage() {
           />
           Featured
         </label>
-        <div className="md:col-span-2 flex gap-3">
-          <button
-            type="submit"
-            className="rounded-xl bg-accent px-4 py-2 text-sm text-white"
-          >
+        <div className="flex gap-3 md:col-span-2">
+          <button type="submit" className="btn-admin btn-admin-primary">
             {editing ? "Update" : "Create"}
           </button>
           {editing && (
@@ -246,7 +243,7 @@ export default function AdminCoursesPage() {
                 setEditing(null);
                 setForm(emptyForm);
               }}
-              className="rounded-xl border border-[var(--glass-border)] px-4 py-2 text-sm"
+              className="btn-admin btn-admin-secondary"
             >
               Cancel
             </button>
@@ -256,10 +253,7 @@ export default function AdminCoursesPage() {
 
       <div className="space-y-3">
         {courses.map((c) => (
-          <div
-            key={c.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--glass-border)] bg-white/40 px-4 py-3"
-          >
+          <div key={c.id} className="panel-row">
             <div>
               <p className="font-medium text-text">
                 {c.name}{" "}
@@ -288,7 +282,7 @@ export default function AdminCoursesPage() {
               </button>
               <button
                 type="button"
-                className="text-red-600"
+                className="text-error"
                 onClick={() => remove(c.id)}
               >
                 Delete

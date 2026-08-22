@@ -52,29 +52,25 @@ export default function AdminStudentsPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search name or email"
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-4 py-2 text-sm"
+          className="input-premium max-w-xs"
         />
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-4 py-2 text-sm"
+          className="input-premium max-w-[12rem]"
         >
           <option value="">All statuses</option>
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
         </select>
-        <button
-          type="button"
-          onClick={load}
-          className="rounded-xl bg-accent px-4 py-2 text-sm text-white"
-        >
+        <button type="button" onClick={load} className="btn-admin btn-admin-primary">
           Filter
         </button>
       </div>
-      {error && <p className="mb-4 text-red-600">{error}</p>}
-      <div className="overflow-x-auto rounded-2xl border border-[var(--glass-border)] bg-white/40">
-        <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-[var(--glass-border)] text-muted">
+      {error && <p className="mb-4 text-error">{error}</p>}
+      <div className="table-shell">
+        <table>
+          <thead>
             <tr>
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Email</th>
@@ -85,20 +81,25 @@ export default function AdminStudentsPage() {
           </thead>
           <tbody>
             {students.map((s) => (
-              <tr key={s.id} className="border-b border-[var(--glass-border)]">
+              <tr key={s.id}>
                 <td className="px-4 py-3 text-text">{s.full_name || "—"}</td>
                 <td className="px-4 py-3 text-muted">{s.email}</td>
-                <td className="px-4 py-3">{s.status}</td>
+                <td className="px-4 py-3">
+                  <span
+                    className={
+                      s.status === "active" ? "text-accent" : "text-muted"
+                    }
+                  >
+                    {s.status}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-muted">
                   {s.created_at
                     ? new Date(s.created_at).toLocaleDateString()
                     : "—"}
                 </td>
-                <td className="px-4 py-3 space-x-3">
-                  <Link
-                    href={`/admin/students/${s.id}`}
-                    className="text-accent"
-                  >
+                <td className="space-x-3 px-4 py-3">
+                  <Link href={`/admin/students/${s.id}`} className="text-accent">
                     View
                   </Link>
                   {s.status === "active" ? (

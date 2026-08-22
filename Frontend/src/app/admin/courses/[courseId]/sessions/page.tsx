@@ -147,8 +147,12 @@ export default function AdminCourseSessionsPage() {
         Calendar when configured.
       </p>
 
-      {error && <p className="mb-4 text-red-600">{error}</p>}
-      {info && <p className="mb-4 text-accent">{info}</p>}
+      {error && <p className="mb-4 text-error">{error}</p>}
+      {info && (
+        <p className="mb-4 rounded-xl border border-accent/20 bg-accent/5 px-4 py-3 text-sm text-accent">
+          {info}
+        </p>
+      )}
 
       <form
         onSubmit={onSubmit}
@@ -162,7 +166,7 @@ export default function AdminCourseSessionsPage() {
           placeholder="Session title"
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium"
         />
         <input
           placeholder="Instructor"
@@ -170,7 +174,7 @@ export default function AdminCourseSessionsPage() {
           onChange={(e) =>
             setForm({ ...form, instructor_name: e.target.value })
           }
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium"
         />
         <label className="text-sm text-muted">
           Starts
@@ -179,7 +183,7 @@ export default function AdminCourseSessionsPage() {
             type="datetime-local"
             value={form.starts_at}
             onChange={(e) => setForm({ ...form, starts_at: e.target.value })}
-            className="mt-1 w-full rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm text-text"
+            className="input-premium mt-1"
           />
         </label>
         <label className="text-sm text-muted">
@@ -189,33 +193,30 @@ export default function AdminCourseSessionsPage() {
             type="datetime-local"
             value={form.ends_at}
             onChange={(e) => setForm({ ...form, ends_at: e.target.value })}
-            className="mt-1 w-full rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm text-text"
+            className="input-premium mt-1"
           />
         </label>
         <input
           placeholder="Meeting URL (Zoom / Meet)"
           value={form.meeting_url}
           onChange={(e) => setForm({ ...form, meeting_url: e.target.value })}
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium"
         />
         <input
           placeholder="Location (optional)"
           value={form.location}
           onChange={(e) => setForm({ ...form, location: e.target.value })}
-          className="rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium"
         />
         <textarea
           placeholder="Description"
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
-          className="md:col-span-2 rounded-xl border border-[var(--glass-border)] bg-white/60 px-3 py-2 text-sm"
+          className="input-premium md:col-span-2"
           rows={3}
         />
-        <div className="md:col-span-2 flex gap-3">
-          <button
-            type="submit"
-            className="rounded-xl bg-accent px-4 py-2 text-sm text-white"
-          >
+        <div className="flex gap-3 md:col-span-2">
+          <button type="submit" className="btn-admin btn-admin-primary">
             {editing ? "Update & notify" : "Create & notify"}
           </button>
           {editing && (
@@ -225,7 +226,7 @@ export default function AdminCourseSessionsPage() {
                 setEditing(null);
                 setForm(empty);
               }}
-              className="rounded-xl border border-[var(--glass-border)] px-4 py-2 text-sm"
+              className="btn-admin btn-admin-secondary"
             >
               Cancel edit
             </button>
@@ -235,10 +236,7 @@ export default function AdminCourseSessionsPage() {
 
       <div className="space-y-3">
         {sessions.map((s) => (
-          <div
-            key={s.id}
-            className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-[var(--glass-border)] bg-white/40 px-4 py-3"
-          >
+          <div key={s.id} className="panel-row items-start">
             <div>
               <p className="font-medium text-text">
                 {s.title}{" "}
@@ -283,7 +281,7 @@ export default function AdminCourseSessionsPage() {
               )}
               <button
                 type="button"
-                className="text-red-600"
+                className="text-error"
                 onClick={() => removeSession(s.id)}
               >
                 Delete

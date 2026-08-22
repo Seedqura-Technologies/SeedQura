@@ -36,7 +36,6 @@ export default function AdminEnrollmentsPage() {
   const [error, setError] = useState("");
 
   async function load() {
-    // Only students who completed payment successfully
     const data = await apiFetch("/admin/enrollments?payment_status=paid");
     setEnrollments(data.enrollments || []);
   }
@@ -62,10 +61,10 @@ export default function AdminEnrollmentsPage() {
         are auto-activated — use Reject only to revoke access.
       </p>
 
-      {error && <p className="mb-4 text-red-600">{error}</p>}
-      <div className="overflow-x-auto rounded-2xl border border-[var(--glass-border)] bg-white/40">
-        <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-[var(--glass-border)] text-muted">
+      {error && <p className="mb-4 text-error">{error}</p>}
+      <div className="table-shell">
+        <table>
+          <thead>
             <tr>
               <th className="px-4 py-3">Student</th>
               <th className="px-4 py-3">Course</th>
@@ -77,7 +76,7 @@ export default function AdminEnrollmentsPage() {
           <tbody>
             {enrollments.map((e) => (
               <Fragment key={e.id}>
-                <tr className="border-b border-[var(--glass-border)]">
+                <tr>
                   <td className="px-4 py-3">
                     <div>{e.profile?.full_name || "—"}</div>
                     <div className="text-xs text-muted">{e.profile?.email}</div>
@@ -89,7 +88,7 @@ export default function AdminEnrollmentsPage() {
                         e.status === "active"
                           ? "text-accent"
                           : e.status === "rejected"
-                            ? "text-red-600"
+                            ? "text-error"
                             : "text-muted"
                       }
                     >
@@ -97,7 +96,7 @@ export default function AdminEnrollmentsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">{e.payment_status}</td>
-                  <td className="px-4 py-3 space-x-3">
+                  <td className="space-x-3 px-4 py-3">
                     <button
                       type="button"
                       className="text-accent"
@@ -110,7 +109,7 @@ export default function AdminEnrollmentsPage() {
                     {e.status !== "rejected" && (
                       <button
                         type="button"
-                        className="text-red-600"
+                        className="text-error"
                         onClick={() => setStatus(e.id, "rejected")}
                       >
                         Reject
@@ -128,7 +127,7 @@ export default function AdminEnrollmentsPage() {
                   </td>
                 </tr>
                 {expanded === e.id && (
-                  <tr className="border-b border-[var(--glass-border)] bg-white/30">
+                  <tr className="table-row-expanded">
                     <td colSpan={5} className="px-4 py-4 text-sm">
                       <div className="grid gap-2 md:grid-cols-2">
                         <p>

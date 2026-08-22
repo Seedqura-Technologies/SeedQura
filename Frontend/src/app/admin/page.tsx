@@ -23,7 +23,7 @@ export default function AdminHomePage() {
 
   return (
     <AdminShell title="Admin">
-      {error && <p className="mb-4 text-red-600">{error}</p>}
+      {error && <p className="mb-4 text-error">{error}</p>}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           ["Students", stats.students],
@@ -35,7 +35,9 @@ export default function AdminHomePage() {
             <p className="text-xs uppercase tracking-widest text-muted">
               {label}
             </p>
-            <p className="mt-3 text-3xl font-medium text-text">{value}</p>
+            <p className="mt-3 text-4xl font-medium tabular-nums text-gradient">
+              {value}
+            </p>
           </div>
         ))}
       </div>

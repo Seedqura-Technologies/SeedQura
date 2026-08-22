@@ -80,7 +80,7 @@ export default function AdminStudentDetailPage() {
         </Link>
       </p>
 
-      {error && <p className="mb-4 text-red-600">{error}</p>}
+      {error && <p className="mb-4 text-error">{error}</p>}
 
       {student && (
         <div className="glass-card mb-8 grid gap-3 p-6 md:grid-cols-2">
@@ -101,7 +101,7 @@ export default function AdminStudentDetailPage() {
             {student.status === "active" ? (
               <button
                 type="button"
-                className="rounded-xl border border-[var(--glass-border)] px-4 py-2 text-sm text-red-600"
+                className="btn-admin btn-admin-secondary text-error"
                 onClick={() => setStudentStatus("suspended")}
               >
                 Suspend account
@@ -109,7 +109,7 @@ export default function AdminStudentDetailPage() {
             ) : (
               <button
                 type="button"
-                className="rounded-xl bg-accent px-4 py-2 text-sm text-white"
+                className="btn-admin btn-admin-primary"
                 onClick={() => setStudentStatus("active")}
               >
                 Activate account
@@ -124,10 +124,7 @@ export default function AdminStudentDetailPage() {
       </h2>
       <div className="space-y-4">
         {enrollments.map((e) => (
-          <article
-            key={e.id}
-            className="rounded-2xl border border-[var(--glass-border)] bg-white/40 p-5"
-          >
+          <article key={e.id} className="panel-row flex-col items-stretch p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="font-medium text-text">
