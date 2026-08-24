@@ -27,7 +27,7 @@ export function UpdatePasswordForm() {
       return;
     }
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event: string) => {
       if (event === "PASSWORD_RECOVERY" && !cancelled) {
         setHasSession(true);
         setReady(true);

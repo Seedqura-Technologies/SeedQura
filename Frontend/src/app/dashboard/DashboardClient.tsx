@@ -61,13 +61,10 @@ export function StudentDashboard() {
     let cancelled = false;
     (async () => {
       try {
-        const [meData, coursesData] = await Promise.all([
-          apiFetch("/student/me"),
-          apiFetch("/courses"),
-        ]);
+        // Home/purchased only need /student/me — load courses when opening Products
+        const meData = await apiFetch("/student/me");
         if (cancelled) return;
         setMe(meData);
-        setCourses(coursesData.courses || []);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Failed to load");
@@ -80,6 +77,22 @@ export function StudentDashboard() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (tab !== "products" || courses.length > 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const coursesData = await apiFetch("/courses");
+        if (!cancelled) setCourses(coursesData.courses || []);
+      } catch {
+        /* products tab can show empty on failure */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, courses.length]);
 
   const title = useMemo(() => {
     if (tab === "products") return "Products";

@@ -42,10 +42,16 @@ export function SiteShell({ children }: SiteShellProps) {
   useEffect(() => {
     const supabase = createClient();
     if (!supabase) return;
-    supabase.auth.getUser().then(async ({ data }) => {
-      const user = data.user;
+    // Local session read — avoid getUser network round trip on every marketing page
+    supabase.auth.getSession().then(async ({ data }) => {
+      const user = data.session?.user ?? null;
       setUserEmail(user?.email ?? null);
       if (user) {
+        const metaRole = user.user_metadata?.role;
+        if (metaRole === "admin" || metaRole === "student") {
+          setRole(metaRole);
+          return;
+        }
         const { data: profile } = await supabase
           .from("profiles")
           .select("role")

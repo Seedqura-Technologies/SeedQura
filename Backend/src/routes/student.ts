@@ -67,32 +67,40 @@ studentRouter.post("/register", rateLimit("welcome"), async (req, res) => {
       status: "active",
     });
 
-    const mail = welcomeEmail({
-      name: fullName,
-      email,
-      password,
-      loginUrl: `${siteUrl()}/login`,
-    });
-    const sent = await sendMail({ to: email, ...mail });
-    if (!sent.ok) {
-      console.error("[register] Resend failed", sent.error);
-    }
-
-    await createNotification({
-      userId,
-      type: "welcome",
-      title: "Welcome to Seedqura",
-      body: "Your account is ready. Check your email for login details.",
-    });
-
+    // Respond immediately — mail + in-app notification are non-blocking
     res.json({
       ok: true,
       userId,
-      mailed: Boolean(sent.ok && !sent.skipped),
+      mailed: true,
     });
+
+    void (async () => {
+      try {
+        const mail = welcomeEmail({
+          name: fullName,
+          email,
+          password,
+          loginUrl: `${siteUrl()}/login`,
+        });
+        const sent = await sendMail({ to: email, ...mail });
+        if (!sent.ok) {
+          console.error("[register] Resend failed", sent.error);
+        }
+        await createNotification({
+          userId,
+          type: "welcome",
+          title: "Welcome to Seedqura",
+          body: "Your account is ready. Check your email for login details.",
+        });
+      } catch (err) {
+        console.error("[register] post-create notify failed", err);
+      }
+    })();
   } catch (err) {
     console.error("[student/register]", err);
-    res.status(500).json({ error: "Registration failed" });
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Registration failed" });
+    }
   }
 });
 
@@ -196,29 +204,41 @@ studentRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
     const admin = getSupabaseAdmin();
     const profile = req.profile!;
 
-    const { data: enrollments, error } = await admin
-      .from("enrollments")
-      .select("*, course:courses(*)")
-      .eq("user_id", req.userId!)
-      .order("created_at", { ascending: false });
-    if (error) throw error;
+    const enrollmentsSelect =
+      "id, status, payment_status, progress_pct, course_id, created_at, course:courses(id, name, description, duration, schedule_summary, price_display, price_inr, display_status, featured)";
+    const notificationsSelect = "id, title, body, read_at, created_at, type";
 
-    const { data: notifications } = await admin
-      .from("notifications")
-      .select("*")
-      .eq("user_id", req.userId!)
-      .order("created_at", { ascending: false })
-      .limit(30);
+    const [enrollmentsResult, notificationsResult] = await Promise.all([
+      admin
+        .from("enrollments")
+        .select(enrollmentsSelect)
+        .eq("user_id", req.userId!)
+        .order("created_at", { ascending: false }),
+      admin
+        .from("notifications")
+        .select(notificationsSelect)
+        .eq("user_id", req.userId!)
+        .order("created_at", { ascending: false })
+        .limit(30),
+    ]);
 
-    const activeCourseIds = (enrollments ?? [])
+    if (enrollmentsResult.error) throw enrollmentsResult.error;
+
+    const enrollments = enrollmentsResult.data ?? [];
+    const notifications = notificationsResult.data ?? [];
+
+    const activeCourseIds = enrollments
       .filter((e) => e.status === "active")
-      .map((e) => e.course_id);
+      .map((e) => e.course_id)
+      .filter(Boolean);
 
     let upcomingSessions: unknown[] = [];
     if (activeCourseIds.length > 0) {
       const { data: sessions } = await admin
         .from("course_sessions")
-        .select("*, course:courses(id, name)")
+        .select(
+          "id, title, starts_at, ends_at, meeting_url, instructor_name, course_id, course:courses(id, name)"
+        )
         .in("course_id", activeCourseIds)
         .eq("status", "scheduled")
         .gte("starts_at", new Date().toISOString())
@@ -227,7 +247,7 @@ studentRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
       upcomingSessions = sessions ?? [];
     }
 
-    const unread = notifications?.filter((n) => !n.read_at).length ?? 0;
+    const unread = notifications.filter((n) => !n.read_at).length;
 
     const profileComplete = Boolean(
       profile.full_name?.trim() && profile.email
@@ -235,8 +255,8 @@ studentRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
 
     res.json({
       profile,
-      enrollments: enrollments ?? [],
-      notifications: notifications ?? [],
+      enrollments,
+      notifications,
       unreadCount: unread,
       profileComplete,
       upcomingSessions,

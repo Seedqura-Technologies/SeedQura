@@ -2,9 +2,10 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { clearTokenCache } from "@/lib/api";
 import { Logo } from "@/components/ui/Logo";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 
@@ -28,7 +29,6 @@ function friendlyAuthError(message: string): string {
 }
 
 export function LoginForm() {
-  const router = useRouter();
   const search = useSearchParams();
   const next = safeNext(search.get("next"));
   const registered = search.get("registered") === "1";
@@ -49,29 +49,34 @@ export function LoginForm() {
     try {
       const supabase = createClient();
       if (!supabase) throw new Error("Auth is not configured");
-      const { error: err } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
+      const { data: signedIn, error: err } =
+        await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
       if (err) throw err;
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .maybeSingle();
-        if (profile?.role === "admin" && next === "/dashboard") {
-          router.replace("/admin");
-          router.refresh();
-          return;
+      clearTokenCache();
+
+      // Prefer user from sign-in (skip extra getUser round trip)
+      const user = signedIn.user;
+      let dest = next;
+      if (user && next === "/dashboard") {
+        const metaRole = user.user_metadata?.role;
+        if (metaRole === "admin") {
+          dest = "/admin";
+        } else {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)
+            .maybeSingle();
+          if (profile?.role === "admin") dest = "/admin";
         }
       }
-      router.replace(next);
-      router.refresh();
+
+      // Hard navigation avoids an extra middleware getUser from router.refresh()
+      window.location.assign(dest);
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Login failed";
       setError(friendlyAuthError(raw));

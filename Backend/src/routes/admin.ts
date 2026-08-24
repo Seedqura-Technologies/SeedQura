@@ -16,8 +16,25 @@ export const adminRouter = Router();
 
 adminRouter.use(requireAuth, requireAdmin);
 
+type StatsCache = {
+  payload: {
+    students: number;
+    courses: number;
+    enrollments: number;
+    paidEnrollments: number;
+  };
+  expiresAt: number;
+};
+
+let statsCache: StatsCache | null = null;
+
 adminRouter.get("/stats", async (_req, res) => {
   try {
+    if (statsCache && statsCache.expiresAt > Date.now()) {
+      res.json(statsCache.payload);
+      return;
+    }
+
     const admin = getSupabaseAdmin();
     const [students, courses, enrollments, paid] = await Promise.all([
       admin
@@ -31,12 +48,14 @@ adminRouter.get("/stats", async (_req, res) => {
         .select("id", { count: "exact", head: true })
         .eq("payment_status", "paid"),
     ]);
-    res.json({
+    const payload = {
       students: students.count ?? 0,
       courses: courses.count ?? 0,
       enrollments: enrollments.count ?? 0,
       paidEnrollments: paid.count ?? 0,
-    });
+    };
+    statsCache = { payload, expiresAt: Date.now() + 30_000 };
+    res.json(payload);
   } catch (err) {
     console.error("[admin/stats]", err);
     res.status(500).json({ error: "Failed to load stats" });

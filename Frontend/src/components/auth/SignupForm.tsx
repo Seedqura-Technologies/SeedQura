@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { postJson } from "@/lib/api";
@@ -16,7 +16,6 @@ function safeNext(raw: string | null): string {
 }
 
 export function SignupForm() {
-  const router = useRouter();
   const search = useSearchParams();
   const next = safeNext(search.get("next"));
   const [fullName, setFullName] = useState("");
@@ -55,7 +54,9 @@ export function SignupForm() {
 
       const supabase = createClient();
       if (!supabase) {
-        router.push(`/login?next=${encodeURIComponent(next)}&registered=1`);
+        window.location.assign(
+          `/login?next=${encodeURIComponent(next)}&registered=1`
+        );
         return;
       }
       const { error: loginErr } = await supabase.auth.signInWithPassword({
@@ -63,12 +64,13 @@ export function SignupForm() {
         password,
       });
       if (loginErr) {
-        router.push(`/login?next=${encodeURIComponent(next)}&registered=1`);
+        window.location.assign(
+          `/login?next=${encodeURIComponent(next)}&registered=1`
+        );
         return;
       }
 
-      router.replace(next);
-      router.refresh();
+      window.location.assign(next);
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Sign up failed";
       if (/already|exists|registered/i.test(raw)) {

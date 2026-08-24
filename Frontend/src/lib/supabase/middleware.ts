@@ -25,9 +25,12 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
+  // getSession reads cookies locally — much faster than getUser network round trip.
+  // API routes still validate the JWT with Supabase Auth.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   const path = request.nextUrl.pathname;
   const isProtected =
@@ -51,10 +54,13 @@ export async function updateSession(request: NextRequest) {
   if (user && isAuthEntry) {
     const redirectUrl = request.nextUrl.clone();
     const next = request.nextUrl.searchParams.get("next");
+    const metaRole = user.user_metadata?.role;
     const safe =
       next && next.startsWith("/") && !next.startsWith("//")
         ? next
-        : "/dashboard";
+        : metaRole === "admin"
+          ? "/admin"
+          : "/dashboard";
     redirectUrl.pathname = safe;
     redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);

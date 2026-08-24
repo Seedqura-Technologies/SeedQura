@@ -26,6 +26,26 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
   },
 
+  // Skip the Next.js serverless proxy hop — forward auth API calls straight to Express.
+  async rewrites() {
+    const api = (process.env.API_URL || "http://localhost:3001").replace(
+      /\/$/,
+      ""
+    );
+    return [
+      { source: "/api/student/:path*", destination: `${api}/api/student/:path*` },
+      { source: "/api/admin/:path*", destination: `${api}/api/admin/:path*` },
+      {
+        source: "/api/payments/:path*",
+        destination: `${api}/api/payments/:path*`,
+      },
+      { source: "/api/courses", destination: `${api}/api/courses` },
+      { source: "/api/courses/:id", destination: `${api}/api/courses/:id` },
+      { source: "/api/contact", destination: `${api}/api/contact` },
+      { source: "/api/apply", destination: `${api}/api/apply` },
+    ];
+  },
+
   // Experimental perf flags
   experimental: {
     // Optimize package imports so only used exports are bundled

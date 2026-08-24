@@ -69,6 +69,8 @@ All editable content lives in `Frontend/data/`:
 
 Full production steps (domain, env vars, Supabase, Razorpay, Resend): see **[DEPLOY.md](./DEPLOY.md)**.
 
+**Complete workflows & all functionalities** (auth, student, admin, payments, emails, APIs): see **[PLATFORM_WORKFLOWS.md](./PLATFORM_WORKFLOWS.md)**.
+
 - **Frontend:** Deploy `Frontend/` to [Vercel](https://vercel.com) → attach `seedqura.com`
 - **Backend:** Deploy `Backend/` to [Render](https://render.com) (Blueprint: `render.yaml`)
   - Set `FRONTEND_URL=https://seedqura.com` and `API_URL` on Vercel to your Render URL

@@ -8,7 +8,10 @@ https://api.seedqura.com      → Render  (Backend/)   [optional custom domain]
   or https://seedqura-api.onrender.com
 ```
 
-Browser → Vercel `/api/*` → proxies server-side to Render via `API_URL`.
+Browser → Vercel `/api/*` → rewritten server-side to Render via `API_URL`
+(Next.js `rewrites` in `Frontend/next.config.ts` — no extra serverless proxy hop).
+
+`API_URL` must be available at **build time** on Vercel so rewrites point at the live API.
 
 ---
 
