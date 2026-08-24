@@ -9,6 +9,7 @@
     "start:dev": "tsx src/index.ts",
     "build": "tsc -p tsconfig.json",
     "db:migrate": "tsx scripts/migrate.ts",
+    "db:sync-lab-courses": "tsx scripts/sync-lab-courses.ts",
     "db:migrate:schedule-rules": "tsx scripts/migrate-schedule-rules.ts",
     "db:migrate:schedule-publish": "tsx scripts/migrate-schedule-publish.ts",
     "db:migrate:calendar-invites": "tsx scripts/migrate-session-calendar-invites.ts",
