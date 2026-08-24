@@ -187,6 +187,10 @@
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
+.academy-detail-page {
+  overflow-x: clip;
+}
+
 .academy-detail-hero {
   border-radius: 20px;
   border: 1px solid var(--academy-border);
@@ -204,6 +208,63 @@
   }
 }
 
+.academy-detail-sidebar {
+  position: relative;
+}
+
+@media (min-width: 1024px) {
+  .academy-detail-sidebar {
+    position: sticky;
+    top: 5.5rem;
+  }
+}
+
+.academy-detail-sidebar-card {
+  border-radius: 20px;
+  border: 1px solid var(--academy-border);
+  background: linear-gradient(
+    165deg,
+    rgba(13, 25, 20, 0.98) 0%,
+    rgba(10, 21, 16, 0.96) 100%
+  );
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(34, 211, 165, 0.06);
+}
+
+.academy-detail-learn-item {
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.02);
+  transition:
+    border-color 0.25s ease,
+    background-color 0.25s ease;
+}
+
+.academy-detail-learn-item:hover {
+  border-color: var(--academy-border);
+  background: rgba(34, 211, 165, 0.04);
+}
+
+.academy-detail-week-card {
+  border-radius: 16px;
+  border: 1px solid var(--academy-border);
+  background: linear-gradient(
+    160deg,
+    rgba(13, 25, 20, 0.88) 0%,
+    rgba(10, 21, 16, 0.94) 100%
+  );
+  transition:
+    border-color 0.3s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.academy-detail-week-card:hover {
+  border-color: rgba(34, 211, 165, 0.28);
+  transform: translateY(-2px);
+}
+
 .academy-detail-chip {
   display: inline-flex;
   align-items: center;
@@ -219,15 +280,6 @@
   border-radius: 16px;
   border: 1px solid var(--academy-border);
   background: rgba(13, 25, 20, 0.72);
-}
-
-.academy-detail-table thead tr {
-  border-bottom: 1px solid var(--academy-border);
-  background: rgba(34, 211, 165, 0.04);
-}
-
-.academy-detail-table tbody tr + tr {
-  border-top: 1px solid var(--academy-border);
 }
 
 .academy-card:focus-within {
