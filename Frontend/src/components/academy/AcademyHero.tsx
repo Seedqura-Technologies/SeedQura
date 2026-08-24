@@ -36,8 +36,8 @@ export function AcademyHero() {
             </h1>
 
             <p className="mt-6 max-w-lg text-base leading-relaxed text-[var(--academy-text-muted)] md:text-lg">
-              Weekend sessions on Google Meet. Short courses from ₹5k · flagship
-              ~₹17k. The site is for purchase and account — teaching happens
+              Weekend sessions on Google Meet. Three hands-on labs at ₹4,999
+              each. The site is for purchase and account — teaching happens
               live.
             </p>
 

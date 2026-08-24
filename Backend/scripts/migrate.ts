@@ -9,40 +9,16 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const COURSE_SEED = [
   {
-    id: "academy",
-    name: "Seedqura Academy",
-    tagline: "Research mentorship program",
+    id: "frameworks-lab",
+    name: "Frameworks Lab",
+    tagline: "See with code — ship vision projects",
     description:
-      "A structured mentorship for students — guided projects in AI for agriculture and medicine, led by active researchers from leading institutions.",
-    category: "Program",
-    level: "Intermediate",
-    duration: "12 weeks",
-    format: "Live sessions + 1:1 mentorship",
-    schedule_summary: "Weekly live sessions + mentorship",
-    price_inr: 24999,
-    currency: "INR",
-    price_display: "₹24,999",
-    status: "published",
-    display_status: "Now Enrolling",
-    featured: true,
-    features: [
-      "Mentor-led research projects",
-      "Live foundational sessions",
-      "Publication-oriented outcomes",
-      "Certificate on completion",
-    ],
-  },
-  {
-    id: "crop-vision",
-    name: "Crop Vision with PyTorch",
-    tagline: "Computer vision for field intelligence",
-    description:
-      "Build and deploy disease-detection models for agricultural imagery — from dataset curation to edge-ready inference pipelines.",
+      "Build end-to-end computer vision skills — from raw images and cleaning to classification, detection, and a GitHub portfolio employers can click and run.",
     category: "Course",
-    level: "Intermediate",
-    duration: "6 weeks",
-    format: "Self-paced + live labs",
-    schedule_summary: "Self-paced with live lab sessions",
+    level: "Beginner–Intermediate",
+    duration: "4 weeks",
+    format: "Sat & Sun · 8 live classes",
+    schedule_summary: "8 live hours · 4 weekends · Campus Vision project",
     price_inr: 4999,
     currency: "INR",
     price_display: "₹4,999",
@@ -50,84 +26,68 @@ const COURSE_SEED = [
     display_status: "Open",
     featured: true,
     features: [
-      "Multispectral & RGB pipelines",
+      "Image pipelines with OpenCV",
       "Hands-on PyTorch projects",
-      "Model evaluation frameworks",
-      "Deployment walkthrough",
+      "Classification + detection demos",
+      "Portfolio-ready GitHub repos",
     ],
   },
   {
-    id: "clinical-ai",
-    name: "Clinical AI Fundamentals",
-    tagline: "Medical imaging & decision support",
+    id: "signal-lab",
+    name: "Signal Lab",
+    tagline: "Business question → deployed model",
     description:
-      "Introduction to hospital-grade AI workflows — imaging triage, clinical NLP, and responsible integration patterns for healthcare settings.",
+      "Go from a real business problem to clean data, trained models, and a live prediction API — then package the full workflow as a GitHub portfolio recruiters can run.",
     category: "Course",
-    level: "Advanced",
-    duration: "8 weeks",
-    format: "Live cohort",
-    schedule_summary: "Live cohort sessions",
-    price_inr: 6999,
+    level: "Beginner–Intermediate",
+    duration: "4 weeks",
+    format: "Sat & Sun · 8 live classes",
+    schedule_summary: "8 live hours · 4 weekends · Student Success Predictor project",
+    price_inr: 4999,
     currency: "INR",
-    price_display: "₹6,999",
+    price_display: "₹4,999",
     status: "published",
     display_status: "Open",
-    featured: false,
+    featured: true,
     features: [
-      "X-ray & MRI triage basics",
-      "Clinical pathway NLP",
-      "Regulatory awareness module",
-      "Case studies from pilots",
+      "Business → ML problem framing",
+      "EDA, cleaning & feature craft",
+      "Model training & evaluation",
+      "FastAPI deploy + portfolio",
     ],
   },
   {
-    id: "remote-sensing",
-    name: "Remote Sensing for Agriculture",
-    tagline: "Satellite analytics at scale",
+    id: "groundtruth-lab",
+    name: "Groundtruth Lab",
+    tagline: "Label data like a pro — ML-ready handoff",
     description:
-      "Process aerial and satellite data for crop monitoring, yield estimation, and large-scale field intelligence using modern geospatial ML.",
+      "Design taxonomies, label real images, run quality checks, and ship documentation an ML engineer can import tomorrow — a GitHub portfolio that proves you belong in AI data ops.",
     category: "Course",
-    level: "Intermediate",
-    duration: "5 weeks",
-    format: "Self-paced",
-    schedule_summary: "Self-paced",
-    price_inr: null,
+    level: "Beginner",
+    duration: "4 weeks",
+    format: "Sat & Sun · 8 live classes",
+    schedule_summary: "8 live hours · 4 weekends · Campus Safety Labeling Kit project",
+    price_inr: 4999,
     currency: "INR",
-    price_display: "Coming soon",
-    status: "draft",
-    display_status: "Coming Soon",
-    featured: false,
+    price_display: "₹4,999",
+    status: "published",
+    display_status: "Open",
+    featured: true,
     features: [
-      "Sentinel & drone data workflows",
-      "Time-series crop analytics",
-      "GIS + ML integration",
-      "Field deployment patterns",
+      "Taxonomy & guideline design",
+      "Hands-on Label Studio labeling",
+      "QA scripts & quality checks",
+      "ML handoff docs + portfolio",
     ],
   },
-  {
-    id: "research-pilots",
-    name: "Research Pilots",
-    tagline: "Enterprise & hospital partnerships",
-    description:
-      "Hospital and field deployment tools under active development. Partner with us for pilot programs tailored to your organization.",
-    category: "Partnership",
-    level: "Enterprise",
-    duration: "Custom",
-    format: "Dedicated engagement",
-    schedule_summary: "Custom engagement",
-    price_inr: null,
-    currency: "INR",
-    price_display: "Custom",
-    status: "draft",
-    display_status: "By inquiry",
-    featured: false,
-    features: [
-      "Custom synthetic populations",
-      "Validation studies",
-      "On-site integration support",
-      "Dedicated success manager",
-    ],
-  },
+];
+
+const LEGACY_COURSE_IDS = [
+  "academy",
+  "crop-vision",
+  "clinical-ai",
+  "remote-sensing",
+  "research-pilots",
 ];
 
 function databaseUrl(): string {
@@ -157,6 +117,16 @@ async function main() {
   await client.connect();
   console.log("[migrate] applying schema…");
   await client.query(sql);
+
+  if (LEGACY_COURSE_IDS.length > 0) {
+    await client.query(
+      `update public.courses
+       set status = 'archived', updated_at = now()
+       where id = any($1::text[])`,
+      [LEGACY_COURSE_IDS]
+    );
+    console.log(`[migrate] archived ${LEGACY_COURSE_IDS.length} legacy courses`);
+  }
 
   for (const course of COURSE_SEED) {
     await client.query(
