@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getLabCourseDetailIds } from "@/content/academy/lab-courses";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base =
@@ -11,6 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/about",
     "/research",
     "/academy",
+    ...getLabCourseDetailIds().map((id) => `/academy/${id}`),
     "/apply",
     "/privacy",
     "/terms",

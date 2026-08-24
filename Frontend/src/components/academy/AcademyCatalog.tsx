@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   ArrowRight,
@@ -59,8 +60,16 @@ type CardProps = {
 };
 
 function AcademyCourseCard({ course, large = false, mark = "leaf" }: CardProps) {
+  const detailHref = `/academy/${course.id}`;
+
   return (
-    <article className={`academy-card group ${large ? "p-7 md:p-9" : "p-6 md:p-7"}`}>
+    <article className={`academy-card group relative ${large ? "p-7 md:p-9" : "p-6 md:p-7"}`}>
+      <Link
+        href={detailHref}
+        className="absolute inset-0 z-0 rounded-[18px]"
+        aria-label={`View ${course.name} syllabus and details`}
+      />
+
       <div className="academy-card-mark pointer-events-none absolute text-[var(--academy-sage)]" aria-hidden>
         {mark === "branch" ? (
           <BranchAccent className="absolute -right-2 bottom-8 w-36" opacity={0.14} />
@@ -151,11 +160,18 @@ function AcademyCourseCard({ course, large = false, mark = "leaf" }: CardProps) 
           >
             {course.priceDisplay}
           </p>
+          <Link
+            href={detailHref}
+            className="relative z-10 mt-2 inline-flex items-center gap-1 text-xs font-medium text-[var(--academy-sage)] transition-colors hover:text-[var(--academy-text)]"
+          >
+            View syllabus
+            <ArrowRight className="h-3 w-3" aria-hidden />
+          </Link>
         </div>
         <MagneticButton
           href={course.cta.href}
           variant={course.featured ? "primary" : "secondary"}
-          className={large ? "!min-h-11" : "!min-h-10 !px-5 !text-xs"}
+          className={`relative z-10 ${large ? "!min-h-11" : "!min-h-10 !px-5 !text-xs"}`}
         >
           {course.cta.label}
           <ArrowRight

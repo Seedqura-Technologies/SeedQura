@@ -187,6 +187,53 @@
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
+.academy-detail-hero {
+  border-radius: 20px;
+  border: 1px solid var(--academy-border);
+  background: linear-gradient(
+    155deg,
+    rgba(13, 25, 20, 0.92) 0%,
+    rgba(10, 21, 16, 0.96) 100%
+  );
+  padding: 1.75rem;
+}
+
+@media (min-width: 768px) {
+  .academy-detail-hero {
+    padding: 2rem 2.25rem;
+  }
+}
+
+.academy-detail-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--academy-border);
+  background: var(--accent-dim);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--academy-text);
+}
+
+.academy-detail-panel {
+  border-radius: 16px;
+  border: 1px solid var(--academy-border);
+  background: rgba(13, 25, 20, 0.72);
+}
+
+.academy-detail-table thead tr {
+  border-bottom: 1px solid var(--academy-border);
+  background: rgba(34, 211, 165, 0.04);
+}
+
+.academy-detail-table tbody tr + tr {
+  border-top: 1px solid var(--academy-border);
+}
+
+.academy-card:focus-within {
+  border-color: rgba(34, 211, 165, 0.32);
+}
+
 .academy-float {
   animation: academy-float 14s ease-in-out infinite;
 }
