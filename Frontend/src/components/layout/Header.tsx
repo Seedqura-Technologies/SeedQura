@@ -33,8 +33,12 @@ export function Header({ homeHref = "/" }: HeaderProps) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-4 pt-4 sm:px-6">
       <div
-        className={`mx-auto flex max-w-6xl items-center justify-between rounded-2xl px-4 py-3 transition-all duration-300 sm:px-6 ${
-          scrolled ? "glass shadow-lg shadow-black/20" : "bg-transparent"
+        className={`site-nav-scrim ${scrolled || menuOpen ? "is-visible" : ""}`}
+        aria-hidden
+      />
+      <div
+        className={`site-nav-bar relative mx-auto flex max-w-6xl items-center justify-between rounded-2xl px-4 py-3 sm:px-6 ${
+          scrolled || menuOpen ? "is-scrolled" : ""
         }`}
       >
         <Logo href={homeHref} variant="header" />
@@ -76,7 +80,7 @@ export function Header({ homeHref = "/" }: HeaderProps) {
       </div>
 
       {menuOpen && (
-        <div className="mx-auto mt-2 max-w-6xl rounded-2xl glass p-4 lg:hidden">
+        <div className="site-nav-bar is-scrolled relative mx-auto mt-2 max-w-6xl rounded-2xl p-4 lg:hidden">
           <nav className="flex flex-col gap-1">
             {navLinks.map((link) => (
               <a

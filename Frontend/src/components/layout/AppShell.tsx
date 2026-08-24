@@ -60,10 +60,12 @@ export function AppShell({
 
       <header className="sticky top-0 z-50 px-4 pt-4 sm:px-6">
         <div
-          className={`mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-2xl px-4 py-3 transition-all duration-300 sm:px-6 ${
-            scrolled
-              ? "glass-light shadow-lg shadow-black/50"
-              : "border border-transparent bg-transparent"
+          className={`site-nav-scrim ${scrolled || menuOpen ? "is-visible" : ""}`}
+          aria-hidden
+        />
+        <div
+          className={`site-nav-bar relative mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-2xl px-4 py-3 sm:px-6 ${
+            scrolled || menuOpen ? "is-scrolled" : ""
           }`}
         >
           <div className="flex min-w-0 items-center gap-3">
@@ -103,7 +105,7 @@ export function AppShell({
         </div>
 
         {menuOpen && (
-          <div className="mx-auto mt-2 max-w-6xl rounded-2xl glass-light p-4 md:hidden">
+          <div className="site-nav-bar is-scrolled relative mx-auto mt-2 max-w-6xl rounded-2xl p-4 md:hidden">
             <nav className="flex flex-col gap-1">
               {links.map((l) => (
                 <Link
