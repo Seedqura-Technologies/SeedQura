@@ -242,7 +242,7 @@ export async function loadScheduleDashboard(
         .select(
           `id, course_id, title, instructor_name, starts_at, ends_at, meeting_url,
            status, google_event_id, calendar_sync_status, calendar_event_status,
-           calendar_sync_error, schedule_rule_id, notify_sent_at, calendar_invite_via,
+           schedule_rule_id, notify_sent_at, calendar_invite_via,
            course:courses(id, name),
            schedule_rule:course_schedule_rules(timezone, status)`
         )
@@ -323,7 +323,11 @@ export async function loadScheduleDashboard(
         calendar_event_status: s.calendar_event_status as string,
         google_event_id: s.google_event_id as string,
       }),
-      calendarSyncError: (s.calendar_sync_error as string | null) ?? null,
+      calendarSyncError:
+        ((s as { calendar_sync_error?: string | null }).calendar_sync_error as
+          | string
+          | null
+          | undefined) ?? null,
       studentCount: studentCountByCourse.get(s.course_id as string) ?? 0,
       scheduleRuleId: (s.schedule_rule_id as string | null) ?? null,
       googleEventId: (s.google_event_id as string | null) ?? null,
