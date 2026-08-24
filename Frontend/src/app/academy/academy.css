@@ -186,36 +186,6 @@
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
-/* Soften CTAs to sage within Academy without changing MagneticButton API */
-.academy-root .btn-primary {
-  background: linear-gradient(135deg, #7faf8c 0%, #5f8f6c 100%);
-  color: #07110d;
-  box-shadow: 0 8px 24px rgba(143, 191, 155, 0.22);
-}
-
-.academy-root .btn-primary:hover {
-  background: linear-gradient(135deg, #8fbf9b 0%, #6f9f7c 100%);
-  box-shadow: 0 10px 28px rgba(143, 191, 155, 0.28);
-}
-
-.academy-root .btn-secondary {
-  border-color: rgba(143, 191, 155, 0.28);
-  color: var(--academy-soft);
-  background: rgba(143, 191, 155, 0.06);
-}
-
-.academy-root .btn-secondary:hover {
-  border-color: rgba(143, 191, 155, 0.45);
-  background: rgba(143, 191, 155, 0.12);
-  color: var(--academy-text);
-}
-
-.academy-root .btn-premium {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .academy-float {
   animation: academy-float 14s ease-in-out infinite;
 }
