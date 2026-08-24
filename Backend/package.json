@@ -8,7 +8,19 @@
     "start": "node dist/index.js",
     "start:dev": "tsx src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:migrate:schedule-rules": "tsx scripts/migrate-schedule-rules.ts",
+    "db:migrate:schedule-publish": "tsx scripts/migrate-schedule-publish.ts",
+    "db:migrate:calendar-invites": "tsx scripts/migrate-session-calendar-invites.ts",
+    "db:migrate:session-student-invites": "tsx scripts/migrate-session-student-invites.ts",
+    "db:migrate:session-cancellation": "tsx scripts/migrate-session-cancellation.ts",
+    "db:migrate:session-reschedule": "tsx scripts/migrate-session-reschedule.ts",
+    "db:migrate:enrollment-calendar-sync": "tsx scripts/migrate-enrollment-calendar-sync.ts",
+    "db:migrate:session-calendar-sync-retry": "tsx scripts/migrate-session-calendar-sync-retry.ts",
+    "db:migrate:session-student-read-policy": "tsx scripts/migrate-session-student-read-policy.ts",
+    "test": "tsx --test src/lib/schedule-generator.test.ts src/lib/course-students.test.ts src/lib/schedule-email.test.ts src/lib/google-calendar.test.ts src/lib/ics.test.ts src/lib/student-course-calendar.test.ts src/lib/session-edit.test.ts src/lib/session-cancel.test.ts src/lib/session-reschedule.test.ts src/lib/enrollment-calendar-sync.test.ts src/lib/session-calendar-retry.test.ts src/lib/schedule-dashboard.test.ts src/lib/notifications.test.ts",
+    "test:e2e": "node --experimental-test-module-mocks --import tsx --test src/lib/schedule-e2e-scenario.test.ts",
+    "test:all": "npm test && npm run test:e2e"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.9",
@@ -17,6 +29,7 @@
     "express": "^4.21.2",
     "googleapis": "^173.0.0",
     "ioredis": "^5.6.1",
+    "luxon": "^3.7.2",
     "nodemailer": "^9.0.3",
     "pg": "^8.22.0",
     "rate-limiter-flexible": "^7.1.1",
@@ -26,6 +39,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "@types/luxon": "^3.7.5",
     "@types/node": "^22.10.2",
     "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.20.0",

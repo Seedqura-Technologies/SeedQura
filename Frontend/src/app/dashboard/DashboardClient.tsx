@@ -26,16 +26,22 @@ type Enrollment = {
   course: Course | null;
 };
 
+type Notification = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  read: boolean;
+  readAt: string | null;
+  timestamp: string;
+  course: { id: string; name: string } | null;
+  session: { id: string; title: string } | null;
+};
+
 type Me = {
   profile: { full_name: string; email: string | null; role: string };
   enrollments: Enrollment[];
-  notifications: {
-    id: string;
-    title: string;
-    body: string;
-    read_at: string | null;
-    created_at: string;
-  }[];
+  notifications: Notification[];
   unreadCount: number;
   profileComplete: boolean;
   upcomingSessions: {
@@ -109,11 +115,36 @@ export function StudentDashboard() {
             unreadCount: 0,
             notifications: prev.notifications.map((n) => ({
               ...n,
-              read_at: n.read_at || new Date().toISOString(),
+              read: true,
+              readAt: n.readAt || new Date().toISOString(),
             })),
           }
         : prev
     );
+  }
+
+  async function markRead(id: string) {
+    await apiFetch(`/student/notifications/${id}/read`, { method: "POST" });
+    setMe((prev) => {
+      if (!prev) return prev;
+      const wasUnread = prev.notifications.some((n) => n.id === id && !n.read);
+      return {
+        ...prev,
+        unreadCount: wasUnread ? Math.max(0, prev.unreadCount - 1) : prev.unreadCount,
+        notifications: prev.notifications.map((n) =>
+          n.id === id
+            ? { ...n, read: true, readAt: n.readAt || new Date().toISOString() }
+            : n
+        ),
+      };
+    });
+  }
+
+  function formatNotificationTime(iso: string) {
+    return new Date(iso).toLocaleString(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
   }
 
   if (loading) {
@@ -217,14 +248,38 @@ export function StudentDashboard() {
               {me.notifications.slice(0, 8).map((n) => (
                 <li
                   key={n.id}
-                  className="border-b border-[var(--border)] py-3 text-sm last:border-0"
+                  className={`border-b border-[var(--border)] py-3 text-sm last:border-0 ${
+                    n.read ? "" : "bg-[var(--surface)]/40"
+                  }`}
                 >
-                  <p className={n.read_at ? "text-muted" : "font-medium text-text"}>
-                    {n.title}
-                  </p>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className={n.read ? "text-muted" : "font-medium text-text"}>
+                      {n.title}
+                    </p>
+                    {!n.read && (
+                      <button
+                        type="button"
+                        onClick={() => markRead(n.id)}
+                        className="shrink-0 text-xs font-semibold text-accent transition-opacity hover:opacity-80"
+                      >
+                        Mark read
+                      </button>
+                    )}
+                  </div>
                   {n.body && (
                     <p className="mt-1 text-xs leading-relaxed text-muted">{n.body}</p>
                   )}
+                  <p className="mt-2 text-[11px] text-muted">
+                    {n.course?.name ? (
+                      <span>{n.course.name}</span>
+                    ) : null}
+                    {n.course?.name && n.session?.title ? " · " : null}
+                    {n.session?.title ? <span>{n.session.title}</span> : null}
+                    {(n.course?.name || n.session?.title) && n.timestamp ? " · " : null}
+                    {n.timestamp ? (
+                      <time dateTime={n.timestamp}>{formatNotificationTime(n.timestamp)}</time>
+                    ) : null}
+                  </p>
                 </li>
               ))}
               {me.notifications.length === 0 && (

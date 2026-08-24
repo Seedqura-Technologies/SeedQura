@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { sendMail, sessionScheduledEmail } from "../src/lib/mail.ts";
-import { buildIcs } from "../src/lib/google-calendar.ts";
+import { buildSessionIcs } from "../src/lib/ics.ts";
 
 const to = process.argv[2] || "ansulsingh67890@gmail.com";
 const startsAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
@@ -19,12 +19,15 @@ const mail = sessionScheduledEmail({
   action: "created",
 });
 
-const ics = buildIcs({
-  uid: `test-session-${Date.now()}`,
-  title: "Crop Vision with PyTorch: Live Lab — Model Training Walkthrough",
-  description: "Test session schedule email from Seedqura",
+const ics = buildSessionIcs({
+  sessionId: `test-session-${Date.now()}`,
+  courseName: "Crop Vision with PyTorch",
+  sessionTitle: "Live Lab — Model Training Walkthrough",
+  sessionDetails: "Test session schedule email from Seedqura",
+  instructorName: "Seedqura Faculty",
   startsAt,
   endsAt,
+  timezone: "Asia/Kolkata",
   meetingUrl: "https://meet.google.com/seedqura-test",
 });
 

@@ -10,6 +10,7 @@ import {
   paymentSuccessEmail,
   sendMail,
 } from "../lib/mail.js";
+import { syncEnrollmentCalendar } from "../lib/enrollment-calendar-sync.js";
 
 export const paymentsRouter = Router();
 
@@ -174,6 +175,18 @@ async function activateEnrollment(opts: {
     email,
     courseName,
     amountDisplay,
+  }).then(async () => {
+    const calendar = await syncEnrollmentCalendar(opts.enrollmentId);
+    if (!calendar.ok && calendar.syncStatus !== "not_applicable") {
+      console.warn("[activateEnrollment] enrollment calendar sync incomplete", {
+        userId: opts.userId,
+        courseId: opts.courseId,
+        direction: calendar.direction,
+        syncStatus: calendar.syncStatus,
+        errors: calendar.errors,
+        enrollmentId: opts.enrollmentId,
+      });
+    }
   });
 
   if (opts.awaitSideEffects) {

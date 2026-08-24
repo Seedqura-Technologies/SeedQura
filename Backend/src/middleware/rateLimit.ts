@@ -4,6 +4,13 @@ import { getRedis, connectRedis } from "../lib/redis.js";
 
 const WINDOW_SEC = 60;
 const MAX_REQUESTS = 10;
+const SCHEDULE_PUBLISH_MAX = 20;
+
+type RateLimitEndpoint =
+  | "contact"
+  | "apply"
+  | "welcome"
+  | "schedule_publish";
 
 type Limiter = {
   consume(key: string): Promise<unknown>;
@@ -19,22 +26,29 @@ async function initLimiters(): Promise<void> {
     const redisReady = await connectRedis();
     const redis = getRedis();
 
-    for (const endpoint of ["contact", "apply", "welcome"]) {
+    const endpoints: Array<{ name: RateLimitEndpoint; points: number }> = [
+      { name: "contact", points: MAX_REQUESTS },
+      { name: "apply", points: MAX_REQUESTS },
+      { name: "welcome", points: MAX_REQUESTS },
+      { name: "schedule_publish", points: SCHEDULE_PUBLISH_MAX },
+    ];
+
+    for (const endpoint of endpoints) {
       if (redisReady && redis) {
         limiters.set(
-          endpoint,
+          endpoint.name,
           new RateLimiterRedis({
             storeClient: redis,
-            keyPrefix: `rl:${endpoint}`,
-            points: MAX_REQUESTS,
+            keyPrefix: `rl:${endpoint.name}`,
+            points: endpoint.points,
             duration: WINDOW_SEC,
           })
         );
       } else {
         limiters.set(
-          endpoint,
+          endpoint.name,
           new RateLimiterMemory({
-            points: MAX_REQUESTS,
+            points: endpoint.points,
             duration: WINDOW_SEC,
           })
         );
@@ -53,7 +67,7 @@ function getClientIp(req: Request): string {
   return req.ip ?? "unknown";
 }
 
-export function rateLimit(endpoint: "contact" | "apply" | "welcome") {
+export function rateLimit(endpoint: RateLimitEndpoint) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       await initLimiters();

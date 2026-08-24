@@ -2,7 +2,10 @@ import { Router } from "express";
 import { getSupabaseAdmin } from "../lib/supabase.js";
 import { requireAuth, type AuthedRequest } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rateLimit.js";
-import { createNotification } from "../lib/notifications.js";
+import {
+  createNotification,
+  formatStudentNotification,
+} from "../lib/notifications.js";
 import { sendMail, welcomeEmail } from "../lib/mail.js";
 
 export const studentRouter = Router();
@@ -206,7 +209,8 @@ studentRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
 
     const enrollmentsSelect =
       "id, status, payment_status, progress_pct, course_id, created_at, course:courses(id, name, description, duration, schedule_summary, price_display, price_inr, display_status, featured)";
-    const notificationsSelect = "id, title, body, read_at, created_at, type";
+    const notificationsSelect =
+      "id, title, body, read_at, created_at, type, metadata";
 
     const [enrollmentsResult, notificationsResult] = await Promise.all([
       admin
@@ -237,14 +241,27 @@ studentRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
       const { data: sessions } = await admin
         .from("course_sessions")
         .select(
-          "id, title, starts_at, ends_at, meeting_url, instructor_name, course_id, course:courses(id, name)"
+          "id, title, starts_at, ends_at, meeting_url, instructor_name, course_id, schedule_rule_id, schedule_rule:course_schedule_rules!schedule_rule_id(status), course:courses(id, name)"
         )
         .in("course_id", activeCourseIds)
         .eq("status", "scheduled")
         .gte("starts_at", new Date().toISOString())
         .order("starts_at", { ascending: true })
-        .limit(20);
-      upcomingSessions = sessions ?? [];
+        .limit(40);
+
+      // One-time sessions (no rule) or sessions under a published schedule only
+      upcomingSessions = (sessions ?? [])
+        .filter((s) => {
+          if (!s.schedule_rule_id) return true;
+          const rule = s.schedule_rule as
+            | { status: string }
+            | { status: string }[]
+            | null;
+          const status = Array.isArray(rule) ? rule[0]?.status : rule?.status;
+          return status === "published";
+        })
+        .slice(0, 20)
+        .map(({ schedule_rule: _r, ...rest }) => rest);
     }
 
     const unread = notifications.filter((n) => !n.read_at).length;
@@ -256,7 +273,7 @@ studentRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
     res.json({
       profile,
       enrollments,
-      notifications,
+      notifications: notifications.map(formatStudentNotification),
       unreadCount: unread,
       profileComplete,
       upcomingSessions,

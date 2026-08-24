@@ -241,18 +241,54 @@ Upcoming sessions = **active** enrollments ∩ `course_sessions` with `status=sc
 
 ### 6.7 Admin — schedule a class (sessions)
 
+**One-time sessions** (existing behavior):
+
 ```
-1. /admin/courses/[courseId]/sessions
-2. Add session: title, instructor, starts/ends, meeting URL, location, description
-3. Backend:
-   - Saves course_sessions row
-   - Optional Google Calendar event (if SA configured)
-   - Emails all ACTIVE enrolled students (Resend + .ics)
-   - Creates in-app notifications (session_created / updated / cancelled)
-4. Edit / delete similarly re-notifies
+1. /admin/courses/[courseId]/sessions → One-time tab
+2. Add session → saves row + calendar + email + in-app notify immediately
+3. Edit / delete similarly re-notifies
 ```
 
-**Without Google Calendar env:** sessions still work — students get Resend + `.ics` only.
+**Recurring schedules** (explicit publish — no email on draft/generate):
+
+```
+Draft Schedule
+      ↓
+Preview          POST …/schedules/preview
+      ↓
+Generate Sessions  POST …/schedules/:id/generate   (DB rows only)
+      ↓
+Admin Review
+      ↓
+Publish Schedule   POST …/schedules/:id/publish
+      ↓
+Per-session calendar invites (deliverSessionCalendarInvites)
+      ↓
+Schedule summary email + in-app notifications
+```
+
+| Status | Meaning |
+|--------|---------|
+| `draft` | Editable; sessions not shown to students as upcoming; no notify |
+| `published` | Students see sessions; `published_at` / `published_by` set |
+| `cancelled` | Soft-cancel; future sessions cancelled |
+
+**Per-session calendar invite workflow** (`deliverSessionCalendarInvites`):
+
+1. Find active, paid enrolled students (`getActiveCourseStudents`)
+2. Upsert one Google Calendar event per session (patch when `google_event_id` exists)
+3. Add student emails as attendees with `sendUpdates=all` when Workspace delegation allows
+4. Store `google_event_id`, `calendar_sync_status`, `calendar_invite_via` (`google` | `ics_email` | `none`)
+5. **Fallback:** if Google cannot invite external attendees (default service-account setup), send batched `.ics` emails via Resend per session
+
+**Google limitation:** plain service accounts cannot email calendar invites to external students. Requires `GOOGLE_CALENDAR_IMPERSONATE_USER` + Domain-Wide Delegation — see `PLATFORM.md`. Emails do not claim Google invites unless `calendar_invite_via=google`.
+
+- Structural edits on a **published** rule return it to **draft** (regenerate, then publish again).
+- Publish is **idempotent**: calendar upserts patch existing events; schedule summary email skipped when `notify_email_sent_at` is set; ICS fallback skipped when `ics_invite_sent_at` is set.
+- Publish sends **one** schedule summary email per student plus per-session calendar delivery (Google or `.ics`).
+- Students’ upcoming list includes one-time sessions **or** sessions under a **published** rule only.
+
+**Without Google Calendar env:** students receive `.ics` calendar attachments via Resend only.
 
 ### 6.8 Admin — enrollments
 
@@ -366,7 +402,29 @@ Core tables (see `Backend/supabase/schema.sql`):
 | Payment success | Payment confirmed + enrollment confirmed | `payment_success` |
 | Payment failed | Payment failed | `payment_failed` |
 | Admin approve/reject | Decision email | `enrollment_approved` / `enrollment_rejected` |
-| Session create/update/cancel | Session email (+ `.ics` when relevant) | `session_created` / `session_updated` / `session_cancelled` |
+| Session create/update/cancel/reschedule | Session email (+ `.ics` when relevant) | `session_created` / `session_updated` / `session_cancelled` / `session_rescheduled` |
+| Schedule publish | Schedule published email | `schedule_published` |
+| Session or schedule calendar sync failure (student-facing) | — | `calendar_sync_failed` |
+| Enrollment activate / reject / refund | Calendar add/remove (no dedicated email) | — |
+
+**Student notification payload** (`GET /api/student/me` → `notifications[]`): each item includes `title`, `body`, `type`, `read` / `readAt`, `timestamp` (`created_at`), optional `course` `{ id, name }`, optional `session` `{ id, title }`, and sanitized `metadata` (operational fields like `googleEventId` / raw sync errors are stripped). Mark one read: `POST /api/student/notifications/:id/read`; mark all: `POST /api/student/notifications/read-all`.
+
+**Scheduling security controls:**
+- All `/api/admin/*` schedule/session routes require `requireAuth` + `requireAdmin`.
+- Students have no session mutation routes; RLS on `course_sessions` is SELECT-only and limited to active enrollments **and** published/announced sessions (draft recurring rows and meeting URLs are not readable via PostgREST).
+- `course_schedule_rules` SELECT is admin-only.
+- Google Calendar credentials and Supabase service role stay in backend env only.
+- Meeting URLs must be `http(s)` on schedule and session create/edit.
+- Schedule publish is rate-limited (`schedule_publish`) in addition to admin auth.
+- Calendar log / student notification paths sanitize provider errors so secrets are not returned to clients.
+
+**Enrollment calendar sync:** `syncEnrollmentCalendar(enrollmentId)` adds the student to future published session events on activation, removes them on reject/refund. Status tracked on `enrollments.calendar_sync_status`; retry via `POST /admin/enrollments/:id/sync-calendar`.
+
+**Offline E2E:** `npm run test:e2e` runs `schedule-e2e-scenario.test.ts` (AI/ML Foundation Sat+Sun scenario with mocked Supabase/Google/Resend) covering publish, edit, cancel, mid-course catch-up, duplicate guards, and failure modes.
+
+**Session calendar retry:** Failed or pending Google sync on published future sessions can be retried via `POST /admin/sessions/:id/retry-calendar-sync`. Patches existing `google_event_id` when valid; recreates only if Google reports the event missing. Status on `course_sessions.calendar_sync_status` with `calendar_sync_error` for admin display.
+
+**Schedule Manager (`/admin/schedules`):** Operational dashboard via `GET /admin/schedule-dashboard` with filters (course, date range, instructor, status, calendar sync status). Shows stats, all sessions, recurring schedules, and actions (create, preview, publish, edit, reschedule, cancel, retry sync).
 
 Templates live in `Backend/src/lib/mail.ts` (branded HTML).
 

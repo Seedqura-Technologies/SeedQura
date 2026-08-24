@@ -7,14 +7,27 @@ import {
 } from "../middleware/auth.js";
 import { createNotification } from "../lib/notifications.js";
 import { enrollmentDecisionEmail, sendMail } from "../lib/mail.js";
+import { syncEnrollmentCalendar } from "../lib/enrollment-calendar-sync.js";
+import { normalizeOptionalHttpUrl } from "../lib/url.js";
 import {
   syncSessionCalendarAndNotify,
   type SessionRow,
 } from "../lib/sessions.js";
+import {
+  SessionEditError,
+  updateSessionSafely,
+  isSessionPublishedForStudents,
+} from "../lib/session-edit.js";
+import { cancelSessionSafely } from "../lib/session-cancel.js";
+import { rescheduleSessionSafely } from "../lib/session-reschedule.js";
+import { retrySessionCalendarSync } from "../lib/session-calendar-retry.js";
+import { loadScheduleDashboard } from "../lib/schedule-dashboard.js";
+import { registerAdminScheduleRoutes } from "./admin-schedules.js";
 
 export const adminRouter = Router();
 
 adminRouter.use(requireAuth, requireAdmin);
+registerAdminScheduleRoutes(adminRouter);
 
 type StatsCache = {
   payload: {
@@ -340,10 +353,39 @@ adminRouter.patch("/enrollments/:id", async (req, res) => {
       });
     }
 
+    if (
+      status === "active" &&
+      enrollment.payment_status === "paid" &&
+      enrollment.course_id
+    ) {
+      void syncEnrollmentCalendar(enrollment.id).catch((err) => {
+        console.error("[admin/enrollments] calendar sync failed", err);
+      });
+    }
+
+    if (
+      (status === "rejected" || status === "refunded") &&
+      enrollment.course_id
+    ) {
+      void syncEnrollmentCalendar(enrollment.id).catch((err) => {
+        console.error("[admin/enrollments] calendar removal failed", err);
+      });
+    }
+
     res.json({ enrollment });
   } catch (err) {
     console.error("[admin/enrollments patch]", err);
     res.status(500).json({ error: "Failed to update enrollment" });
+  }
+});
+
+adminRouter.post("/enrollments/:id/sync-calendar", async (req, res) => {
+  try {
+    const result = await syncEnrollmentCalendar(req.params.id);
+    res.json(result);
+  } catch (err) {
+    console.error("[admin/enrollments sync-calendar]", err);
+    res.status(500).json({ error: "Failed to sync enrollment calendar" });
   }
 });
 
@@ -356,7 +398,9 @@ adminRouter.get("/courses/:courseId/sessions", async (req, res) => {
     const admin = getSupabaseAdmin();
     const { data, error } = await admin
       .from("course_sessions")
-      .select("*")
+      .select(
+        "*, schedule_rule:course_schedule_rules!schedule_rule_id(id, status, timezone)"
+      )
       .eq("course_id", req.params.courseId)
       .order("starts_at", { ascending: true });
     if (error) throw error;
@@ -382,6 +426,12 @@ adminRouter.post("/courses/:courseId/sessions", async (req, res) => {
       return;
     }
 
+    const meetingUrl = normalizeOptionalHttpUrl(body.meeting_url);
+    if (!meetingUrl.ok) {
+      res.status(400).json({ error: meetingUrl.error });
+      return;
+    }
+
     const admin = getSupabaseAdmin();
     const { data: course } = await admin
       .from("courses")
@@ -400,7 +450,7 @@ adminRouter.post("/courses/:courseId/sessions", async (req, res) => {
       instructor_name: String(body.instructor_name || ""),
       starts_at,
       ends_at,
-      meeting_url: body.meeting_url || null,
+      meeting_url: meetingUrl.url,
       location: String(body.location || ""),
       status: "scheduled",
     };
@@ -428,6 +478,7 @@ adminRouter.post("/courses/:courseId/sessions", async (req, res) => {
       session: refreshed || session,
       notified: notify.notified,
       googleEventId: notify.googleEventId,
+      calendarSyncStatus: notify.calendarSyncStatus,
     });
   } catch (err) {
     console.error("[admin/sessions post]", err);
@@ -438,78 +489,140 @@ adminRouter.post("/courses/:courseId/sessions", async (req, res) => {
 adminRouter.patch("/sessions/:id", async (req, res) => {
   try {
     const body = req.body || {};
-    const admin = getSupabaseAdmin();
-    const { data: existing, error: findErr } = await admin
-      .from("course_sessions")
-      .select("*")
-      .eq("id", req.params.id)
-      .maybeSingle();
-    if (findErr) throw findErr;
-    if (!existing) {
-      res.status(404).json({ error: "Session not found" });
-      return;
-    }
-
-    const patch: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-    };
-    for (const f of [
-      "title",
-      "description",
-      "instructor_name",
-      "starts_at",
-      "ends_at",
-      "meeting_url",
-      "location",
-      "status",
-    ] as const) {
-      if (body[f] !== undefined) patch[f] = body[f];
-    }
-
-    const starts = String(patch.starts_at ?? existing.starts_at);
-    const ends = String(patch.ends_at ?? existing.ends_at);
-    if (new Date(ends) <= new Date(starts)) {
-      res.status(400).json({ error: "ends_at must be after starts_at" });
-      return;
-    }
-
-    const { data: session, error } = await admin
-      .from("course_sessions")
-      .update(patch)
-      .eq("id", req.params.id)
-      .select("*")
-      .single();
-    if (error) throw error;
-
-    const { data: course } = await admin
-      .from("courses")
-      .select("name")
-      .eq("id", session.course_id)
-      .maybeSingle();
-
-    const action =
-      session.status === "cancelled" ? "cancelled" : ("updated" as const);
-
-    const notify = await syncSessionCalendarAndNotify({
-      session: session as SessionRow,
-      courseName: course?.name || session.course_id,
-      action,
+    const result = await updateSessionSafely({
+      sessionId: req.params.id,
+      body: {
+        title: body.title,
+        description: body.description,
+        instructor_name: body.instructor_name,
+        starts_at: body.starts_at,
+        ends_at: body.ends_at,
+        meeting_url: body.meeting_url,
+        location: body.location,
+        status: body.status,
+        confirmPublishedEdit: body.confirmPublishedEdit === true,
+      },
     });
-
-    const { data: refreshed } = await admin
-      .from("course_sessions")
-      .select("*")
-      .eq("id", session.id)
-      .single();
 
     res.json({
-      session: refreshed || session,
-      notified: notify.notified,
-      googleEventId: notify.googleEventId,
+      session: result.session,
+      notified: result.notified,
+      googleEventId: result.googleEventId,
+      calendarSyncStatus: result.calendarSyncStatus,
+      calendarFieldsChanged: result.calendarFieldsChanged,
+      studentsNotified: result.studentsNotified,
+      calendarSynced: result.calendarSynced,
+      preservedHistorical: result.preservedHistorical,
     });
   } catch (err) {
+    if (err instanceof SessionEditError) {
+      res.status(err.statusCode).json({
+        error: err.message,
+        code: err.code,
+        blockedFields: err.blockedFields,
+      });
+      return;
+    }
     console.error("[admin/sessions patch]", err);
     res.status(500).json({ error: "Failed to update session" });
+  }
+});
+
+adminRouter.post("/sessions/:id/reschedule", async (req: AuthedRequest, res) => {
+  try {
+    const body = req.body || {};
+    const starts_at = String(body.starts_at || body.startsAt || "").trim();
+    const ends_at = String(body.ends_at || body.endsAt || "").trim();
+    if (!starts_at || !ends_at) {
+      res.status(400).json({ error: "starts_at and ends_at required" });
+      return;
+    }
+
+    const modeRaw = String(body.mode || "in_place").trim();
+    const mode =
+      modeRaw === "replacement_created" || modeRaw === "create_replacement"
+        ? ("replacement_created" as const)
+        : ("in_place" as const);
+
+    const result = await rescheduleSessionSafely({
+      sessionId: String(req.params.id),
+      startsAt: starts_at,
+      endsAt: ends_at,
+      mode,
+      note: body.note ?? body.rescheduleNote,
+      confirmReschedule: body.confirmReschedule === true,
+      rescheduledBy: req.userId ?? null,
+    });
+
+    res.json({
+      session: result.session,
+      auditId: result.auditId,
+      mode: result.mode,
+      replacementSessionId: result.replacementSessionId,
+      notified: result.notified,
+      googleEventId: result.googleEventId,
+      calendarSyncStatus: result.calendarSyncStatus,
+      studentsNotified: result.studentsNotified,
+    });
+  } catch (err) {
+    if (err instanceof SessionEditError) {
+      res.status(err.statusCode).json({
+        error: err.message,
+        code: err.code,
+      });
+      return;
+    }
+    console.error("[admin/sessions reschedule]", err);
+    res.status(500).json({ error: "Failed to reschedule session" });
+  }
+});
+
+adminRouter.post("/sessions/:id/retry-calendar-sync", async (req, res) => {
+  try {
+    const result = await retrySessionCalendarSync(String(req.params.id));
+    res.json(result);
+  } catch (err) {
+    if (err instanceof SessionEditError) {
+      res.status(err.statusCode).json({
+        error: err.message,
+        code: err.code,
+      });
+      return;
+    }
+    console.error("[admin/sessions retry-calendar-sync]", err);
+    res.status(500).json({ error: "Failed to retry calendar sync" });
+  }
+});
+
+adminRouter.post("/sessions/:id/cancel", async (req, res) => {
+  try {
+    const body = req.body || {};
+    const result = await cancelSessionSafely({
+      sessionId: req.params.id,
+      cancellationReason: body.cancellationReason ?? body.cancellation_reason,
+      replacementPlanned: body.replacementPlanned ?? body.replacement_planned,
+      confirmPublishedCancel: body.confirmPublishedCancel === true,
+    });
+
+    res.json({
+      session: result.session,
+      notified: result.notified,
+      googleEventId: result.googleEventId,
+      calendarSyncStatus: result.calendarSyncStatus,
+      calendarEventStatus: result.calendarEventStatus,
+      studentsNotified: result.studentsNotified,
+      scheduleRuleUnchanged: result.scheduleRuleUnchanged,
+    });
+  } catch (err) {
+    if (err instanceof SessionEditError) {
+      res.status(err.statusCode).json({
+        error: err.message,
+        code: err.code,
+      });
+      return;
+    }
+    console.error("[admin/sessions cancel]", err);
+    res.status(500).json({ error: "Failed to cancel session" });
   }
 });
 
@@ -527,21 +640,28 @@ adminRouter.delete("/sessions/:id", async (req, res) => {
       return;
     }
 
-    const { data: course } = await admin
-      .from("courses")
-      .select("name")
-      .eq("id", existing.course_id)
-      .maybeSingle();
+    let scheduleRuleStatus: string | null = null;
+    if (existing.schedule_rule_id) {
+      const { data: rule } = await admin
+        .from("course_schedule_rules")
+        .select("status")
+        .eq("id", existing.schedule_rule_id)
+        .maybeSingle();
+      scheduleRuleStatus = rule?.status ?? null;
+    }
 
-    const cancelled = {
-      ...(existing as SessionRow),
-      status: "cancelled",
-    };
-    await syncSessionCalendarAndNotify({
-      session: cancelled,
-      courseName: course?.name || existing.course_id,
-      action: "cancelled",
-    });
+    if (
+      isSessionPublishedForStudents(existing, scheduleRuleStatus) ||
+      existing.status === "cancelled" ||
+      existing.status === "completed"
+    ) {
+      res.status(409).json({
+        error:
+          "Published or historical sessions cannot be deleted. Use POST /admin/sessions/:id/cancel to soft-cancel and preserve the record.",
+        code: "USE_CANCEL_NOT_DELETE",
+      });
+      return;
+    }
 
     const { error } = await admin
       .from("course_sessions")
@@ -552,5 +672,25 @@ adminRouter.delete("/sessions/:id", async (req, res) => {
   } catch (err) {
     console.error("[admin/sessions delete]", err);
     res.status(500).json({ error: "Failed to delete session" });
+  }
+});
+
+adminRouter.get("/schedule-dashboard", async (req, res) => {
+  try {
+    const q = req.query;
+    const result = await loadScheduleDashboard({
+      courseId: String(q.courseId || q.course || "").trim() || undefined,
+      instructor: String(q.instructor || "").trim() || undefined,
+      status: String(q.status || "").trim() || undefined,
+      calendarSyncStatus: String(
+        q.calendarSyncStatus || q.syncStatus || ""
+      ).trim() || undefined,
+      startsFrom: String(q.startsFrom || q.from || "").trim() || undefined,
+      startsTo: String(q.startsTo || q.to || "").trim() || undefined,
+    });
+    res.json(result);
+  } catch (err) {
+    console.error("[admin/schedule-dashboard]", err);
+    res.status(500).json({ error: "Failed to load schedule dashboard" });
   }
 });

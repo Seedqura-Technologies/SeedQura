@@ -178,6 +178,8 @@ export async function sendMail(opts: {
   to: string;
   subject: string;
   html: string;
+  /** Plain-text fallback for clients that prefer or only support text. */
+  text?: string;
   attachments?: { filename: string; content: Buffer | string }[];
 }) {
   const resend = client();
@@ -193,6 +195,7 @@ export async function sendMail(opts: {
     to: opts.to,
     subject: opts.subject,
     html: opts.html,
+    ...(opts.text ? { text: opts.text } : {}),
     attachments: opts.attachments?.map((a) => ({
       filename: a.filename,
       content:
@@ -206,6 +209,46 @@ export async function sendMail(opts: {
     return { ok: false, error: result.error };
   }
   return { ok: true, id: result.data?.id };
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Send many emails with bounded concurrency to avoid Resend rate limits.
+ * Processes `batchSize` in parallel, then waits `delayMs` before the next batch.
+ */
+export async function sendMailInBatches(
+  messages: Array<{
+    to: string;
+    subject: string;
+    html: string;
+    text?: string;
+    attachments?: { filename: string; content: Buffer | string }[];
+  }>,
+  opts?: { batchSize?: number; delayMs?: number }
+): Promise<{ sent: number; failed: number; skipped: number }> {
+  const batchSize = Math.max(1, opts?.batchSize ?? 10);
+  const delayMs = Math.max(0, opts?.delayMs ?? 250);
+  let sent = 0;
+  let failed = 0;
+  let skipped = 0;
+
+  for (let i = 0; i < messages.length; i += batchSize) {
+    const batch = messages.slice(i, i + batchSize);
+    const results = await Promise.all(batch.map((m) => sendMail(m)));
+    for (const r of results) {
+      if (r.ok && "skipped" in r && r.skipped) skipped += 1;
+      else if (r.ok) sent += 1;
+      else failed += 1;
+    }
+    if (i + batchSize < messages.length && delayMs > 0) {
+      await sleep(delayMs);
+    }
+  }
+
+  return { sent, failed, skipped };
 }
 
 export function welcomeEmail(opts: {
@@ -371,6 +414,8 @@ export function sessionScheduledEmail(opts: {
   meetingUrl?: string | null;
   instructorName?: string;
   action: "created" | "updated" | "cancelled";
+  /** How the student received/will receive a calendar invite. */
+  calendarInviteVia?: "google" | "ics_email" | "none";
 }) {
   const actionLabel =
     opts.action === "created"
@@ -399,6 +444,14 @@ export function sessionScheduledEmail(opts: {
   }
 
   const dashboard = `${siteUrl()}/dashboard`;
+  const calendarNote =
+    opts.action === "cancelled"
+      ? ""
+      : opts.calendarInviteVia === "google"
+        ? `<p style="margin:0;font-size:13px;color:#7a726a;">A Google Calendar invitation was sent to your email. Accept it to add this class to your calendar.</p>`
+        : opts.calendarInviteVia === "ics_email"
+          ? `<p style="margin:0;font-size:13px;color:#7a726a;">A calendar invite (.ics) is attached — open it to add this class to Google Calendar, Outlook, or Apple Calendar.</p>`
+          : `<p style="margin:0;font-size:13px;color:#7a726a;">Open your dashboard for session details.</p>`;
 
   return {
     subject: `Class ${actionLabel}: ${opts.sessionTitle} (${opts.courseName})`,
@@ -410,13 +463,271 @@ export function sessionScheduledEmail(opts: {
         <p style="margin:0 0 14px;">Hi ${safeName},</p>
         <p style="margin:0 0 14px;">A class session for <strong>${escapeHtml(opts.courseName)}</strong> was <strong>${actionLabel}</strong>.</p>
         ${detailRows(rows)}
-        <p style="margin:0;font-size:13px;color:#7a726a;">A calendar invite (.ics) is attached so you can add it to Google Calendar or Outlook.</p>
+        ${calendarNote}
       `,
       cta:
         opts.meetingUrl && opts.action !== "cancelled"
           ? { label: "Join session", href: opts.meetingUrl }
           : { label: "Open dashboard", href: dashboard },
     }),
+  };
+}
+
+export type ReplacementPlanned = "yes" | "no" | "unknown";
+
+function formatSessionDate(iso: string, timezone?: string) {
+  try {
+    return new Date(iso).toLocaleDateString("en-IN", {
+      timeZone: timezone || process.env.SESSION_TIMEZONE || "Asia/Kolkata",
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
+function formatSessionTime(iso: string, timezone?: string) {
+  try {
+    return new Date(iso).toLocaleTimeString("en-IN", {
+      timeZone: timezone || process.env.SESSION_TIMEZONE || "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function replacementPlannedCopy(plan: ReplacementPlanned): {
+  html: string;
+  text: string;
+} {
+  switch (plan) {
+    case "yes":
+      return {
+        html: `<p style="margin:0 0 14px;"><strong>Replacement class:</strong> Yes — a replacement session will be scheduled. We will notify you when details are confirmed.</p>`,
+        text: "Replacement class: Yes — a replacement session will be scheduled. We will notify you when details are confirmed.",
+      };
+    case "no":
+      return {
+        html: `<p style="margin:0 0 14px;"><strong>Replacement class:</strong> No — there is no replacement planned for this cancelled session.</p>`,
+        text: "Replacement class: No — there is no replacement planned for this cancelled session.",
+      };
+    default:
+      return {
+        html: `<p style="margin:0 0 14px;"><strong>Replacement class:</strong> To be confirmed — we will let you know if a replacement session is scheduled.</p>`,
+        text: "Replacement class: To be confirmed — we will let you know if a replacement session is scheduled.",
+      };
+  }
+}
+
+/** Dedicated cancellation email when an admin cancels a published class session. */
+export function sessionCancelledEmail(opts: {
+  name: string;
+  courseName: string;
+  sessionTitle: string;
+  startsAt: string;
+  endsAt: string;
+  instructorName?: string;
+  cancellationReason?: string | null;
+  replacementPlanned?: ReplacementPlanned;
+  timezone?: string;
+}) {
+  const tz = opts.timezone || process.env.SESSION_TIMEZONE || "Asia/Kolkata";
+  const classDate = formatSessionDate(opts.startsAt, tz);
+  const startTime = formatSessionTime(opts.startsAt, tz);
+  const endTime = formatSessionTime(opts.endsAt, tz);
+  const originalTime = `${startTime} – ${endTime}`;
+  const safeName = escapeHtml(opts.name || "there");
+  const replacement = replacementPlannedCopy(opts.replacementPlanned || "unknown");
+  const dashboard = `${siteUrl()}/dashboard`;
+
+  const rows: { label: string; value: string }[] = [
+    { label: "Course", value: escapeHtml(opts.courseName) },
+    { label: "Cancelled class", value: escapeHtml(opts.sessionTitle) },
+    { label: "Class date", value: escapeHtml(classDate) },
+    { label: "Original time", value: escapeHtml(originalTime) },
+  ];
+  if (opts.instructorName?.trim()) {
+    rows.push({
+      label: "Instructor",
+      value: escapeHtml(opts.instructorName.trim()),
+    });
+  }
+  if (opts.cancellationReason?.trim()) {
+    rows.push({
+      label: "Reason",
+      value: escapeHtml(opts.cancellationReason.trim()),
+    });
+  }
+
+  const textLines = [
+    `Hi ${opts.name || "there"},`,
+    "",
+    `A class session for ${opts.courseName} has been cancelled.`,
+    "",
+    `Course: ${opts.courseName}`,
+    `Cancelled class: ${opts.sessionTitle}`,
+    `Class date: ${classDate}`,
+    `Original time: ${originalTime}`,
+    opts.instructorName?.trim()
+      ? `Instructor: ${opts.instructorName.trim()}`
+      : null,
+    opts.cancellationReason?.trim()
+      ? `Reason: ${opts.cancellationReason.trim()}`
+      : null,
+    "",
+    replacement.text,
+    "",
+    "Other upcoming sessions in this course are not affected.",
+    `Dashboard: ${dashboard}`,
+    "",
+    "— Seedqura",
+  ].filter((line) => line !== null);
+
+  return {
+    subject: `Class cancelled: ${opts.sessionTitle} (${opts.courseName})`,
+    html: emailLayout({
+      preheader: `${opts.sessionTitle} on ${classDate} has been cancelled.`,
+      eyebrow: "Class cancelled",
+      title: escapeHtml(opts.sessionTitle),
+      bodyHtml: `
+        <p style="margin:0 0 14px;">Hi ${safeName},</p>
+        <p style="margin:0 0 14px;">A class session for <strong>${escapeHtml(opts.courseName)}</strong> has been <strong>cancelled</strong>. The rest of your course schedule is unchanged.</p>
+        ${detailRows(rows)}
+        ${replacement.html}
+        <p style="margin:0;font-size:13px;color:#7a726a;">Open your dashboard to view remaining upcoming sessions.</p>
+      `,
+      cta: { label: "Open dashboard", href: dashboard },
+    }),
+    text: textLines.join("\n"),
+  };
+}
+
+export type RescheduleMode = "in_place" | "replacement_created";
+
+/** Dedicated reschedule email when a class session moves to a new date/time. */
+export function sessionRescheduledEmail(opts: {
+  name: string;
+  courseName: string;
+  sessionTitle: string;
+  previousStartsAt: string;
+  previousEndsAt: string;
+  newStartsAt: string;
+  newEndsAt: string;
+  instructorName?: string;
+  timezone?: string;
+  mode?: RescheduleMode;
+  note?: string | null;
+}) {
+  const tz = opts.timezone || process.env.SESSION_TIMEZONE || "Asia/Kolkata";
+  const prevDate = formatSessionDate(opts.previousStartsAt, tz);
+  const prevTime = `${formatSessionTime(opts.previousStartsAt, tz)} – ${formatSessionTime(opts.previousEndsAt, tz)}`;
+  const newDate = formatSessionDate(opts.newStartsAt, tz);
+  const newTime = `${formatSessionTime(opts.newStartsAt, tz)} – ${formatSessionTime(opts.newEndsAt, tz)}`;
+  const safeName = escapeHtml(opts.name || "there");
+  const dashboard = `${siteUrl()}/dashboard`;
+
+  const rows: { label: string; value: string }[] = [
+    { label: "Course", value: escapeHtml(opts.courseName) },
+    { label: "Class", value: escapeHtml(opts.sessionTitle) },
+    { label: "Previous date", value: escapeHtml(prevDate) },
+    { label: "Previous time", value: escapeHtml(prevTime) },
+    { label: "New date", value: escapeHtml(newDate) },
+    { label: "New time", value: escapeHtml(newTime) },
+  ];
+  if (opts.instructorName?.trim()) {
+    rows.push({
+      label: "Instructor",
+      value: escapeHtml(opts.instructorName.trim()),
+    });
+  }
+  if (opts.note?.trim()) {
+    rows.push({ label: "Note", value: escapeHtml(opts.note.trim()) });
+  }
+
+  const modeNote =
+    opts.mode === "replacement_created"
+      ? `<p style="margin:0 0 14px;font-size:13px;color:#7a726a;">This class was moved to a new session slot. Your calendar invite reflects the <strong>new</strong> date and time.</p>`
+      : `<p style="margin:0 0 14px;font-size:13px;color:#7a726a;">This is the same class session — your calendar invite has been updated to the new date and time.</p>`;
+
+  const textLines = [
+    `Hi ${opts.name || "there"},`,
+    "",
+    `Your class for ${opts.courseName} has been rescheduled.`,
+    "",
+    `Class: ${opts.sessionTitle}`,
+    `Previous: ${prevDate}, ${prevTime}`,
+    `New: ${newDate}, ${newTime}`,
+    opts.instructorName?.trim() ? `Instructor: ${opts.instructorName.trim()}` : null,
+    opts.note?.trim() ? `Note: ${opts.note.trim()}` : null,
+    "",
+    "Please update your calendar with the new date and time.",
+    `Dashboard: ${dashboard}`,
+    "",
+    "— Seedqura",
+  ].filter((line) => line !== null);
+
+  return {
+    subject: `Class rescheduled: ${opts.sessionTitle} (${opts.courseName})`,
+    html: emailLayout({
+      preheader: `${opts.sessionTitle} moved to ${newDate}, ${newTime}`,
+      eyebrow: "Class rescheduled",
+      title: escapeHtml(opts.sessionTitle),
+      bodyHtml: `
+        <p style="margin:0 0 14px;">Hi ${safeName},</p>
+        <p style="margin:0 0 14px;">Your class for <strong>${escapeHtml(opts.courseName)}</strong> has been <strong>rescheduled</strong>.</p>
+        ${detailRows(rows)}
+        ${modeNote}
+        <p style="margin:0;font-size:13px;color:#7a726a;">Other upcoming sessions in this course are unchanged.</p>
+      `,
+      cta: { label: "Open dashboard", href: dashboard },
+    }),
+    text: textLines.join("\n"),
+  };
+}
+
+/** Dedicated ICS calendar invite email (fallback when Google cannot invite attendees). */
+export function sessionCalendarInviteEmail(opts: {
+  name: string;
+  courseName: string;
+  sessionTitle: string;
+  startsAt: string;
+  endsAt: string;
+}) {
+  const when = `${formatWhen(opts.startsAt)} – ${formatWhen(opts.endsAt)}`;
+  const safeName = escapeHtml(opts.name || "there");
+  const dashboard = `${siteUrl()}/dashboard`;
+
+  return {
+    subject: `Calendar invite: ${opts.sessionTitle} (${opts.courseName})`,
+    html: emailLayout({
+      preheader: `Add ${opts.sessionTitle} to your calendar — ${when}`,
+      eyebrow: "Calendar invite",
+      title: escapeHtml(opts.sessionTitle),
+      bodyHtml: `
+        <p style="margin:0 0 14px;">Hi ${safeName},</p>
+        <p style="margin:0 0 14px;">Your class <strong>${escapeHtml(opts.sessionTitle)}</strong> for <strong>${escapeHtml(opts.courseName)}</strong> is scheduled.</p>
+        ${detailRows([
+          { label: "When", value: escapeHtml(when) },
+          { label: "Course", value: escapeHtml(opts.courseName) },
+        ])}
+        <p style="margin:0;font-size:13px;color:#7a726a;">Open the attached <strong>.ics</strong> file to add this session to your calendar app. (Google Calendar invitations are not available with the current server configuration.)</p>
+      `,
+      cta: { label: "Open dashboard", href: dashboard },
+    }),
+    text: [
+      `Hi ${opts.name || "there"},`,
+      "",
+      `Calendar invite: ${opts.sessionTitle} (${opts.courseName})`,
+      `When: ${when}`,
+      "",
+      "Open the attached .ics file to add this session to your calendar.",
+      `Dashboard: ${dashboard}`,
+    ].join("\n"),
   };
 }
 
@@ -431,3 +742,196 @@ function formatWhen(iso: string) {
     return iso;
   }
 }
+
+function formatDateInZone(iso: string, timezone: string) {
+  try {
+    return new Date(iso).toLocaleDateString("en-IN", {
+      timeZone: timezone || "Asia/Kolkata",
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
+function formatClock(time: string) {
+  const t = time.trim();
+  if (/^\d{2}:\d{2}/.test(t)) return t.slice(0, 5);
+  return t;
+}
+
+export type SchedulePublishedEmailOpts = {
+  name: string;
+  courseName: string;
+  scheduleTitle: string;
+  courseDuration: string;
+  classDays: string;
+  classTime: string;
+  timezone: string;
+  instructor: string;
+  meetingUrl?: string | null;
+  location?: string | null;
+  sessionCount: number;
+  firstClassDate: string;
+  lastClassDate: string;
+  /** Honest summary of how per-session calendar invites are delivered. */
+  calendarInviteSummary?: "google" | "ics_email" | "mixed" | "none";
+  /** Student joined after publish — only upcoming sessions are included. */
+  joinedLate?: boolean;
+};
+
+function scheduleCalendarInviteCopy(
+  summary: SchedulePublishedEmailOpts["calendarInviteSummary"]
+): { html: string; text: string } {
+  switch (summary) {
+    case "google":
+      return {
+        html: `<p style="margin:0 0 14px;">Each class session has a Google Calendar invitation sent to your email. Accept the invites to add all sessions to your calendar.</p>`,
+        text: "Each class session has a Google Calendar invitation sent to your email.",
+      };
+    case "ics_email":
+      return {
+        html: `<p style="margin:0 0 14px;">Google Calendar attendee invitations are <strong>not</strong> available with the current server configuration. You will receive a separate email per class with an <strong>.ics</strong> attachment to add sessions to your calendar app.</p>`,
+        text: "Google Calendar attendee invitations are not available with the current server configuration. You will receive separate .ics calendar attachments per class via email.",
+      };
+    case "mixed":
+      return {
+        html: `<p style="margin:0 0 14px;">Some sessions use Google Calendar invitations; others use <strong>.ics</strong> email attachments depending on server configuration.</p>`,
+        text: "Some sessions use Google Calendar invitations; others use .ics email attachments.",
+      };
+    default:
+      return {
+        html: `<p style="margin:0 0 14px;">Review upcoming sessions in your dashboard for dates and join links.</p>`,
+        text: "Review upcoming sessions in your dashboard.",
+      };
+  }
+}
+
+/** One email per student when a recurring schedule is published. */
+export function schedulePublishedEmail(opts: SchedulePublishedEmailOpts) {
+  const safeName = escapeHtml(opts.name || "there");
+  const safeCourse = escapeHtml(opts.courseName);
+  const safeTitle = escapeHtml(opts.scheduleTitle);
+  const dashboard = `${siteUrl()}/dashboard`;
+
+  const rows: { label: string; value: string }[] = [
+    { label: "Course", value: safeCourse },
+    { label: "Schedule", value: safeTitle },
+  ];
+  if (opts.courseDuration?.trim()) {
+    rows.push({
+      label: "Course duration",
+      value: escapeHtml(opts.courseDuration.trim()),
+    });
+  }
+  rows.push(
+    { label: "Class days", value: escapeHtml(opts.classDays) },
+    { label: "Class time", value: escapeHtml(opts.classTime) },
+    { label: "Timezone", value: escapeHtml(opts.timezone) }
+  );
+  if (opts.instructor?.trim()) {
+    rows.push({
+      label: "Instructor",
+      value: escapeHtml(opts.instructor.trim()),
+    });
+  }
+  if (opts.meetingUrl?.trim()) {
+    rows.push({
+      label: "Meeting URL",
+      value: `<a href="${escapeHtml(opts.meetingUrl.trim())}" style="color:#1a7a55;word-break:break-all;">${escapeHtml(opts.meetingUrl.trim())}</a>`,
+    });
+  }
+  if (opts.location?.trim()) {
+    rows.push({
+      label: "Location",
+      value: escapeHtml(opts.location.trim()),
+    });
+  }
+  rows.push(
+    {
+      label: "Sessions",
+      value: escapeHtml(String(opts.sessionCount)),
+    },
+    {
+      label: "First class",
+      value: escapeHtml(opts.firstClassDate),
+    },
+    {
+      label: "Last class",
+      value: escapeHtml(opts.lastClassDate),
+    }
+  );
+
+  const inviteCopy = scheduleCalendarInviteCopy(opts.calendarInviteSummary);
+  const lateJoinNote = opts.joinedLate
+    ? `<p style="margin:0 0 14px;font-size:13px;color:#7a726a;">You joined after this schedule was published. <strong>Past sessions are not included</strong> — only your upcoming classes are listed below, and calendar invites are sent for those sessions only.</p>`
+    : "";
+
+  const textLines = [
+    `Hi ${opts.name || "there"},`,
+    "",
+    opts.joinedLate
+      ? `You enrolled in ${opts.courseName} after the schedule was published. Past sessions are not included — here are your upcoming classes:`
+      : `The class schedule for ${opts.courseName} has been published.`,
+    "",
+    `Course: ${opts.courseName}`,
+    `Schedule: ${opts.scheduleTitle}`,
+    opts.courseDuration?.trim()
+      ? `Course duration: ${opts.courseDuration.trim()}`
+      : null,
+    `Class days: ${opts.classDays}`,
+    `Class time: ${opts.classTime}`,
+    `Timezone: ${opts.timezone}`,
+    opts.instructor?.trim() ? `Instructor: ${opts.instructor.trim()}` : null,
+    opts.meetingUrl?.trim() ? `Meeting URL: ${opts.meetingUrl.trim()}` : null,
+    opts.location?.trim() ? `Location: ${opts.location.trim()}` : null,
+    `Number of sessions: ${opts.sessionCount}`,
+    `First class: ${opts.firstClassDate}`,
+    `Last class: ${opts.lastClassDate}`,
+    "",
+    inviteCopy.text,
+    "",
+    `Dashboard: ${dashboard}`,
+    "",
+    "— Seedqura",
+  ].filter((line) => line !== null);
+
+  return {
+    subject: opts.joinedLate
+      ? `Your upcoming schedule — ${opts.scheduleTitle} (${opts.courseName})`
+      : `Schedule published — ${opts.scheduleTitle} (${opts.courseName})`,
+    html: emailLayout({
+      preheader: opts.joinedLate
+        ? `Your upcoming classes for ${opts.courseName}.`
+        : `${opts.scheduleTitle} for ${opts.courseName} is live.`,
+      eyebrow: opts.joinedLate ? "Upcoming schedule" : "Schedule published",
+      title: safeTitle,
+      bodyHtml: `
+        <p style="margin:0 0 14px;">Hi ${safeName},</p>
+        <p style="margin:0 0 14px;">${
+          opts.joinedLate
+            ? `You're enrolled in <strong>${safeCourse}</strong>. Here are your <strong>upcoming</strong> class sessions:`
+            : `The class schedule for <strong>${safeCourse}</strong> has been published. Here are the details:`
+        }</p>
+        ${lateJoinNote}
+        ${detailRows(rows)}
+        ${inviteCopy.html}
+        <p style="margin:0;font-size:13px;color:#7a726a;">Open your dashboard anytime to review upcoming sessions and join links.</p>
+      `,
+      cta: opts.meetingUrl?.trim()
+        ? { label: "Open meeting link", href: opts.meetingUrl.trim() }
+        : { label: "Open dashboard", href: dashboard },
+      secondaryCta: { label: "Student dashboard", href: dashboard },
+    }),
+    text: textLines.join("\n"),
+  };
+}
+
+/** @internal helpers exported for tests / publish pipeline */
+export const scheduleEmailFormat = {
+  formatDateInZone,
+  formatClock,
+};

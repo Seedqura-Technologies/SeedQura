@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 
 const links = [
   { href: "/admin", label: "Overview" },
+  { href: "/admin/schedules", label: "Schedules" },
   { href: "/admin/students", label: "Students" },
   { href: "/admin/courses", label: "Courses" },
   { href: "/admin/enrollments", label: "Enrollments" },
