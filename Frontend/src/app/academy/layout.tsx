@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "./academy.css";
 
 export const metadata: Metadata = {
   title: "Seedqura Academy — Courses & Programs",
@@ -6,11 +7,11 @@ export const metadata: Metadata = {
     "Seedqura Academy — weekend live cohorts on Google Meet. Short courses from ₹5k and a flagship program.",
 };
 
-// No SiteShell — Academy is a fully standalone experience.
+/** Standalone Academy experience — no main SiteShell chrome. */
 export default function AcademyLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="min-h-screen bg-bg text-text">{children}</div>;
+  return <div className="academy-root">{children}</div>;
 }

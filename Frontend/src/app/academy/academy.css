@@ -1,0 +1,277 @@
+/* Scoped Academy visual system — premium dark + subtle botanical */
+
+.academy-root {
+  --academy-bg: #07110d;
+  --academy-bg-2: #0a1510;
+  --academy-card: #0d1914;
+  --academy-sage: #8fbf9b;
+  --academy-soft: #b8d8b0;
+  --academy-muted: #527a61;
+  --academy-text: #f2f0ea;
+  --academy-text-muted: #9aab9e;
+  --academy-border: rgba(143, 191, 155, 0.14);
+  --academy-glow: rgba(143, 191, 155, 0.12);
+
+  min-height: 100vh;
+  background: var(--academy-bg);
+  color: var(--academy-text);
+  isolation: isolate;
+}
+
+.academy-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid transparent;
+  background: rgba(7, 17, 13, 0.55);
+  backdrop-filter: blur(16px) saturate(130%);
+  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.academy-header.is-scrolled {
+  background: rgba(7, 17, 13, 0.9);
+  border-bottom-color: var(--academy-border);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.academy-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 5.5rem 0 4rem;
+}
+
+@media (min-width: 768px) {
+  .academy-hero {
+    padding: 7rem 0 5.5rem;
+  }
+}
+
+.academy-hero-bg {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 55% 50% at 75% 30%, rgba(143, 191, 155, 0.16), transparent 65%),
+    radial-gradient(ellipse 45% 40% at 15% 70%, rgba(82, 122, 97, 0.14), transparent 60%),
+    linear-gradient(180deg, #07110d 0%, #0a1510 55%, #07110d 100%);
+}
+
+.academy-hero-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  background: rgba(143, 191, 155, 0.18);
+}
+
+.academy-hero-orb-a {
+  width: 55%;
+  height: 55%;
+  top: 18%;
+  left: 22%;
+  animation: academy-breathe 10s ease-in-out infinite;
+}
+
+.academy-hero-orb-b {
+  width: 35%;
+  height: 35%;
+  right: 8%;
+  bottom: 16%;
+  background: rgba(82, 122, 97, 0.2);
+  animation: academy-breathe 12s ease-in-out infinite reverse;
+}
+
+.academy-particles {
+  background-image: radial-gradient(
+    circle,
+    rgba(184, 216, 176, 0.35) 0.6px,
+    transparent 0.8px
+  );
+  background-size: 42px 42px;
+  opacity: 0.18;
+  mask-image: radial-gradient(circle at 50% 45%, black 20%, transparent 72%);
+}
+
+.academy-section-curve {
+  pointer-events: none;
+  position: relative;
+  height: 3.5rem;
+  margin-top: -1px;
+  overflow: hidden;
+}
+
+.academy-section-curve::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 80% 100% at 50% -20%,
+    rgba(143, 191, 155, 0.1),
+    transparent 70%
+  );
+}
+
+.academy-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  border-radius: 18px;
+  border: 1px solid var(--academy-border);
+  background: linear-gradient(
+    165deg,
+    rgba(13, 25, 20, 0.96) 0%,
+    rgba(10, 21, 16, 0.98) 100%
+  );
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  transition:
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.4s ease,
+    box-shadow 0.4s ease;
+}
+
+.academy-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(143, 191, 155, 0.32);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(143, 191, 155, 0.08),
+    0 0 48px rgba(143, 191, 155, 0.08);
+}
+
+.academy-card .academy-card-mark {
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.academy-card:hover .academy-card-mark {
+  transform: translate(-4px, 3px) rotate(-4deg);
+}
+
+.academy-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--academy-border);
+  background: rgba(143, 191, 155, 0.08);
+  padding: 0.25rem 0.7rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--academy-sage);
+}
+
+.academy-badge-status {
+  border-color: rgba(184, 216, 176, 0.22);
+  background: rgba(184, 216, 176, 0.06);
+  color: var(--academy-soft);
+}
+
+.academy-badge-partnership {
+  color: var(--academy-text-muted);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.academy-cta-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid var(--academy-border);
+  background:
+    radial-gradient(ellipse 70% 80% at 85% 20%, rgba(143, 191, 155, 0.12), transparent 55%),
+    linear-gradient(145deg, rgba(13, 25, 20, 0.95), rgba(7, 17, 13, 0.98));
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* Soften CTAs to sage within Academy without changing MagneticButton API */
+.academy-root .btn-primary {
+  background: linear-gradient(135deg, #7faf8c 0%, #5f8f6c 100%);
+  color: #07110d;
+  box-shadow: 0 8px 24px rgba(143, 191, 155, 0.22);
+}
+
+.academy-root .btn-primary:hover {
+  background: linear-gradient(135deg, #8fbf9b 0%, #6f9f7c 100%);
+  box-shadow: 0 10px 28px rgba(143, 191, 155, 0.28);
+}
+
+.academy-root .btn-secondary {
+  border-color: rgba(143, 191, 155, 0.28);
+  color: var(--academy-soft);
+  background: rgba(143, 191, 155, 0.06);
+}
+
+.academy-root .btn-secondary:hover {
+  border-color: rgba(143, 191, 155, 0.45);
+  background: rgba(143, 191, 155, 0.12);
+  color: var(--academy-text);
+}
+
+.academy-root .btn-premium {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.academy-float {
+  animation: academy-float 14s ease-in-out infinite;
+}
+
+.academy-float-delayed {
+  animation: academy-float 16s ease-in-out infinite reverse;
+}
+
+@keyframes academy-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes academy-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.04);
+  }
+}
+
+@media (max-width: 767px) {
+  .academy-hero-visual-wrap {
+    max-width: 17rem;
+    margin-inline: auto;
+    opacity: 0.85;
+  }
+
+  .academy-hide-mobile-deco {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .academy-float,
+  .academy-float-delayed,
+  .academy-hero-orb-a,
+  .academy-hero-orb-b {
+    animation: none !important;
+  }
+
+  .academy-card,
+  .academy-card .academy-card-mark {
+    transition: none !important;
+  }
+
+  .academy-card:hover {
+    transform: none;
+  }
+}
