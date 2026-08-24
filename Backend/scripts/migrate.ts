@@ -82,14 +82,6 @@ const COURSE_SEED = [
   },
 ];
 
-const LEGACY_COURSE_IDS = [
-  "academy",
-  "crop-vision",
-  "clinical-ai",
-  "remote-sensing",
-  "research-pilots",
-];
-
 function databaseUrl(): string {
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
   const password = process.env.SUPABASE_DB_PASSWORD;
@@ -117,16 +109,6 @@ async function main() {
   await client.connect();
   console.log("[migrate] applying schema…");
   await client.query(sql);
-
-  if (LEGACY_COURSE_IDS.length > 0) {
-    await client.query(
-      `update public.courses
-       set status = 'archived', updated_at = now()
-       where id = any($1::text[])`,
-      [LEGACY_COURSE_IDS]
-    );
-    console.log(`[migrate] archived ${LEGACY_COURSE_IDS.length} legacy courses`);
-  }
 
   for (const course of COURSE_SEED) {
     await client.query(
@@ -174,7 +156,14 @@ async function main() {
       ]
     );
   }
-  console.log(`[migrate] seeded ${COURSE_SEED.length} courses`);
+  const keepIds = COURSE_SEED.map((c) => c.id);
+  const deleted = await client.query(
+    `delete from public.courses where not (id = any($1::text[])) returning id`,
+    [keepIds]
+  );
+  console.log(
+    `[migrate] seeded ${COURSE_SEED.length} courses; removed ${deleted.rowCount ?? 0} other course(s)`
+  );
   await client.end();
 
   const adminEmail = process.env.ADMIN_EMAIL;

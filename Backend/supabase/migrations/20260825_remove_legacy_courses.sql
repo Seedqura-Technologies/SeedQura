@@ -1,5 +1,5 @@
--- Replace legacy Academy catalog with the three weekend lab courses (₹4,999 each).
--- Prefer 20260825_remove_legacy_courses.sql for a full delete of non-lab courses.
+-- Keep only the three Academy lab courses. Cascades remove linked enrollments/sessions.
+-- Run after 20260825_academy_lab_courses.sql (or standalone: upserts labs then deletes the rest).
 
 insert into public.courses (
   id, name, tagline, description, category, level, duration, format,
@@ -77,3 +77,6 @@ on conflict (id) do update set
   featured = excluded.featured,
   features = excluded.features,
   updated_at = now();
+
+delete from public.courses
+where id not in ('frameworks-lab', 'signal-lab', 'groundtruth-lab');
