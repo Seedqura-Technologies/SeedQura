@@ -318,9 +318,8 @@
 
 @media (max-width: 767px) {
   .academy-hero-visual-wrap {
-    max-width: 17rem;
+    max-width: 20rem;
     margin-inline: auto;
-    opacity: 0.85;
   }
 
   .academy-hide-mobile-deco {

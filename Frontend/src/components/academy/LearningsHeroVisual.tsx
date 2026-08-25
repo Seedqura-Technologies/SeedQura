@@ -53,8 +53,8 @@ export function LearningsHeroVisual({ className = "" }: LearningsHeroVisualProps
       nodes.push({
         x: cx + Math.cos(angle) * radius + (Math.random() - 0.5) * 40,
         y: cy + Math.sin(angle) * radius + (Math.random() - 0.5) * 40,
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: (Math.random() - 0.5) * 0.35,
+        vx: (Math.random() - 0.5) * 0.55,
+        vy: (Math.random() - 0.5) * 0.55,
         r: 2.2 + Math.random() * 2.8,
         phase: Math.random() * Math.PI * 2,
         energy: 0,
@@ -103,13 +103,20 @@ export function LearningsHeroVisual({ className = "" }: LearningsHeroVisualProps
     const mx = mouseRef.current.x * W;
     const my = mouseRef.current.y * H;
     const mouseActive = mouseRef.current.inside;
-    const connectionRadius = Math.min(W, H) * 0.28;
+    const connectionRadius = Math.min(W, H) * 0.36;
     const reduced = reducedRef.current;
 
-    // Soft vignette plate
-    const plate = ctx.createRadialGradient(W * 0.5, H * 0.45, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.62);
-    plate.addColorStop(0, "rgba(13, 25, 20, 0.55)");
-    plate.addColorStop(0.55, "rgba(7, 17, 13, 0.25)");
+    // Soft vignette plate — ambient only, no hard box
+    const plate = ctx.createRadialGradient(
+      W * 0.5,
+      H * 0.48,
+      Math.min(W, H) * 0.05,
+      W * 0.5,
+      H * 0.5,
+      Math.max(W, H) * 0.72
+    );
+    plate.addColorStop(0, "rgba(13, 25, 20, 0.22)");
+    plate.addColorStop(0.45, "rgba(7, 17, 13, 0.06)");
     plate.addColorStop(1, "rgba(7, 17, 13, 0)");
     ctx.fillStyle = plate;
     ctx.fillRect(0, 0, W, H);
@@ -138,8 +145,8 @@ export function LearningsHeroVisual({ className = "" }: LearningsHeroVisualProps
       }
     }
 
-    // Update nodes
-    const pad = 28;
+    // Update nodes — freer drift, soft bounds (no hard box feel)
+    const pad = 8;
     for (let i = 0; i < nodes.length; i++) {
       const n = nodes[i];
       const isHub = i === nodes.length - 1;
@@ -147,39 +154,44 @@ export function LearningsHeroVisual({ className = "" }: LearningsHeroVisualProps
       if (!isHub && !reduced) {
         n.x += n.vx;
         n.y += n.vy;
-        if (n.x < pad || n.x > W - pad) n.vx *= -1;
-        if (n.y < pad || n.y > H - pad) n.vy *= -1;
-        n.x = Math.max(pad, Math.min(W - pad, n.x));
-        n.y = Math.max(pad, Math.min(H - pad, n.y));
-        // Gentle pull toward center so the cloud stays composed
-        n.vx += (W * 0.5 - n.x) * 0.00004;
-        n.vy += (H * 0.5 - n.y) * 0.00004;
-        n.vx *= 0.995;
-        n.vy *= 0.995;
+        // Soft bounce near edges instead of hard walls
+        if (n.x < pad) n.vx += 0.08;
+        if (n.x > W - pad) n.vx -= 0.08;
+        if (n.y < pad) n.vy += 0.08;
+        if (n.y > H - pad) n.vy -= 0.08;
+        n.x = Math.max(-20, Math.min(W + 20, n.x));
+        n.y = Math.max(-20, Math.min(H + 20, n.y));
+        n.vx += (W * 0.5 - n.x) * 0.000025;
+        n.vy += (H * 0.5 - n.y) * 0.000025;
+        n.vx *= 0.997;
+        n.vy *= 0.997;
       } else if (isHub) {
-        n.x = W * 0.5 + Math.sin(t * 0.4) * 6;
-        n.y = H * 0.48 + Math.cos(t * 0.35) * 5;
+        n.x = W * 0.5 + Math.sin(t * 0.4) * 8;
+        n.y = H * 0.48 + Math.cos(t * 0.35) * 7;
       }
 
-      n.phase += 0.02;
-      n.energy *= 0.94;
+      n.phase += 0.025;
+      n.energy *= 0.93;
 
       if (mouseActive) {
         const dx = n.x - mx;
         const dy = n.y - my;
         const d = Math.sqrt(dx * dx + dy * dy);
-        if (d < 90) {
-          n.energy = Math.min(1, n.energy + (1 - d / 90) * 0.18);
+        const influence = 140;
+        if (d < influence) {
+          const strength = 1 - d / influence;
+          n.energy = Math.min(1, n.energy + strength * 0.28);
           if (!isHub && d > 1) {
-            n.vx += (dx / d) * 0.04;
-            n.vy += (dy / d) * 0.04;
+            // Attract slightly then push — lively interaction
+            const pull = strength * 0.07;
+            n.vx += (-dx / d) * pull * 0.55 + (dx / d) * pull * 0.35;
+            n.vy += (-dy / d) * pull * 0.55 + (dy / d) * pull * 0.35;
           }
         }
       }
 
-      // Idle sparkle
-      if (!reduced && Math.random() < 0.004) {
-        n.energy = Math.min(1, n.energy + 0.55);
+      if (!reduced && Math.random() < 0.006) {
+        n.energy = Math.min(1, n.energy + 0.7);
       }
     }
 
@@ -301,11 +313,11 @@ export function LearningsHeroVisual({ className = "" }: LearningsHeroVisualProps
       }
     }
 
-    // Label
+    // Label — light, no frame
     ctx.font = `10px "Courier New", Courier, monospace`;
-    ctx.fillStyle = "rgba(34, 211, 165, 0.32)";
+    ctx.fillStyle = "rgba(34, 211, 165, 0.28)";
     ctx.textBaseline = "top";
-    ctx.fillText("LEARNINGS · NEURAL PATHWAYS", 14, 12);
+    ctx.fillText("LEARNINGS · MOVE TO EXCITE", 8, 8);
 
     // Horizontal scanline (research-page kinship)
     if (!reduced) {
@@ -326,24 +338,36 @@ export function LearningsHeroVisual({ className = "" }: LearningsHeroVisualProps
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const onMove = (e: MouseEvent) => {
+    const onMove = (e: PointerEvent) => {
       const r = canvas.getBoundingClientRect();
-      mouseRef.current = {
-        x: (e.clientX - r.left) / r.width,
-        y: (e.clientY - r.top) / r.height,
-        inside:
-          e.clientX >= r.left &&
-          e.clientX <= r.right &&
-          e.clientY >= r.top &&
-          e.clientY <= r.bottom,
-      };
+      const x = (e.clientX - r.left) / r.width;
+      const y = (e.clientY - r.top) / r.height;
+      const inside = x >= -0.05 && x <= 1.05 && y >= -0.05 && y <= 1.05;
+      mouseRef.current = { x, y, inside };
     };
     const onLeave = () => {
       mouseRef.current.inside = false;
     };
+    const onDown = (e: PointerEvent) => {
+      onMove(e);
+      // Burst energy near cursor on press / tap
+      const r = canvas.getBoundingClientRect();
+      const mx = e.clientX - r.left;
+      const my = e.clientY - r.top;
+      for (const n of nodesRef.current) {
+        const dx = n.x - mx;
+        const dy = n.y - my;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 160) {
+          n.energy = 1;
+        }
+      }
+    };
 
-    window.addEventListener("mousemove", onMove, { passive: true });
-    canvas.addEventListener("mouseleave", onLeave);
+    canvas.addEventListener("pointermove", onMove, { passive: true });
+    canvas.addEventListener("pointerleave", onLeave);
+    canvas.addEventListener("pointerdown", onDown, { passive: true });
+    window.addEventListener("pointermove", onMove, { passive: true });
     frameRef.current = requestAnimationFrame(render);
 
     const onResize = () => {
@@ -356,28 +380,23 @@ export function LearningsHeroVisual({ className = "" }: LearningsHeroVisualProps
 
     return () => {
       cancelAnimationFrame(frameRef.current);
-      window.removeEventListener("mousemove", onMove);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerleave", onLeave);
+      canvas.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointermove", onMove);
       window.removeEventListener("resize", onResize);
-      canvas.removeEventListener("mouseleave", onLeave);
     };
   }, [render]);
 
   return (
     <div
-      className={`relative aspect-square w-full max-w-lg overflow-hidden rounded-2xl border border-[var(--academy-border)] bg-[rgba(7,17,13,0.65)] shadow-[0_20px_60px_rgba(0,0,0,0.35)] ${className}`}
+      className={`relative aspect-[5/4] w-full max-w-xl sm:aspect-square ${className}`}
     >
       <canvas
         ref={canvasRef}
         className="h-full w-full cursor-crosshair"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-0 rounded-2xl"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 60% at 50% 40%, transparent 40%, rgba(7,17,13,0.45) 100%)",
-        }}
-        aria-hidden
+        aria-label="Interactive neural pathways"
+        role="img"
       />
     </div>
   );
