@@ -3,11 +3,8 @@
 import { ArrowRight } from "lucide-react";
 import { ScrollReveal } from "@/components/motion/ScrollReveal";
 import { MagneticButton } from "@/components/ui/MagneticButton";
-import {
-  AcademyHeroVisual,
-  BranchAccent,
-  LeafSilhouette,
-} from "@/components/academy/BotanicalMarks";
+import { LearningsHeroVisual } from "@/components/academy/LearningsHeroVisual";
+import { BranchAccent, LeafSilhouette } from "@/components/academy/BotanicalMarks";
 
 export function AcademyHero() {
   return (
@@ -52,8 +49,11 @@ export function AcademyHero() {
           </div>
         </ScrollReveal>
 
-        <ScrollReveal delay={0.08} className="academy-hero-visual-wrap flex justify-center lg:justify-end">
-          <AcademyHeroVisual />
+        <ScrollReveal
+          delay={0.08}
+          className="academy-hero-visual-wrap flex justify-center lg:justify-end"
+        >
+          <LearningsHeroVisual />
         </ScrollReveal>
       </div>
     </section>
