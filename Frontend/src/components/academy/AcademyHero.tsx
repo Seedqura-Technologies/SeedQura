@@ -49,12 +49,10 @@ export function AcademyHero() {
           </div>
         </ScrollReveal>
 
-        <ScrollReveal
-          delay={0.08}
-          className="academy-hero-visual-wrap flex justify-center lg:justify-end"
-        >
+        {/* Always mounted — don't gate behind ScrollReveal (can hide / zero-size canvas) */}
+        <div className="academy-hero-visual-wrap relative z-10 flex justify-center lg:justify-end">
           <LearningsHeroVisual />
-        </ScrollReveal>
+        </div>
       </div>
     </section>
   );
