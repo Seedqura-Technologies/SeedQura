@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { GraduationCap, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { Footer } from "@/components/layout/Footer";
@@ -11,9 +11,10 @@ import { PageTransition } from "@/components/motion/PageTransition";
 import { createClient } from "@/lib/supabase/client";
 
 const pageLinks = [
-  { label: "Home",     href: "/" },
+  { label: "Home", href: "/" },
   { label: "Research", href: "/research" },
-  { label: "About",    href: "/about" },
+  { label: "About", href: "/about" },
+  { label: "Learnings", href: "/academy" },
 ];
 
 type SiteShellProps = {
@@ -114,16 +115,6 @@ export function SiteShell({ children }: SiteShellProps) {
                 </Link>
               );
             })}
-
-            {/* Academy — separate product, minimal pill */}
-            <Link
-              href="/academy"
-              title="Seedqura Academy — courses & programs"
-              className="ml-2 flex items-center gap-1.5 rounded-full border border-[var(--accent-border)] bg-[var(--accent-dim)] px-3 py-1.5 text-xs font-semibold text-[var(--accent)] transition-all hover:bg-[var(--accent)] hover:text-black"
-            >
-              <GraduationCap className="h-3.5 w-3.5" />
-              Academy
-            </Link>
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
@@ -192,15 +183,6 @@ export function SiteShell({ children }: SiteShellProps) {
                   </Link>
                 );
               })}
-              {/* Academy pill — mobile */}
-              <Link
-                href="/academy"
-                onClick={() => setMenuOpen(false)}
-                className="mt-1 flex items-center gap-2 rounded-lg border border-[var(--accent-border)] bg-[var(--accent-dim)] px-4 py-3 text-sm font-semibold text-[var(--accent)]"
-              >
-                <GraduationCap className="h-4 w-4" />
-                Academy — Courses & Programs
-              </Link>
 
               <div className="mt-2 flex flex-col gap-2 px-2">
                 {userEmail ? (

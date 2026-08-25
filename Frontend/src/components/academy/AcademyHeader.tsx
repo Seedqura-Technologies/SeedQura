@@ -27,9 +27,9 @@ export function AcademyHeader() {
           <span className="text-[var(--academy-muted)]" aria-hidden>
             /
           </span>
-          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--academy-sage)]">
+          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--academy-text-muted)]">
             <LeafSilhouette className="h-4 w-3 text-[var(--academy-sage)]" opacity={0.85} />
-            Academy
+            Learnings
           </span>
         </div>
 

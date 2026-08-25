@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./academy.css";
 
 export const metadata: Metadata = {
-  title: "Seedqura Academy — Courses & Programs",
+  title: "Seedqura Learnings",
   description:
-    "Seedqura Academy — weekend live cohorts on Google Meet. Frameworks Lab, Signal Lab, and Groundtruth Lab at ₹4,999 each.",
+    "Seedqura Learnings — AI and machine learning from first principles, with depth in medical intelligence and systems you can trust.",
 };
 
 /** Standalone Academy experience — no main SiteShell chrome. */

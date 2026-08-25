@@ -25,20 +25,19 @@ export function AcademyHero() {
       <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:gap-14 lg:px-8">
         <ScrollReveal>
           <div>
-            <span className="academy-badge inline-flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--academy-sage)]" />
-              Seedqura Academy
-            </span>
-
-            <h1 className="mt-6 max-w-xl text-4xl font-semibold leading-[1.08] tracking-[-0.03em] text-[var(--academy-text)] md:text-5xl lg:text-[3.35rem]">
-              Live cohorts for people building with{" "}
-              <span className="text-[var(--academy-sage)]">medical AI</span>
+            <h1 className="max-w-xl text-4xl font-semibold leading-[1.08] tracking-[-0.03em] text-[var(--academy-text)] md:text-5xl lg:text-[3.35rem]">
+              Seedqura{" "}
+              <span className="text-[var(--academy-sage)]">Learnings</span>
             </h1>
 
-            <p className="mt-6 max-w-lg text-base leading-relaxed text-[var(--academy-text-muted)] md:text-lg">
-              Weekend sessions on Google Meet. Three hands-on labs at ₹4,999
-              each. The site is for purchase and account — teaching happens
-              live.
+            <p className="mt-6 max-w-lg text-lg font-medium leading-snug tracking-tight text-[var(--academy-text)] md:text-xl">
+              Intelligence is a craft — not a shortcut.
+            </p>
+
+            <p className="mt-4 max-w-lg text-base leading-relaxed text-[var(--academy-text-muted)] md:text-lg">
+              Learn AI and machine learning from first principles, then go deeper
+              where it matters most: medical intelligence, signal systems, and
+              the discipline of building what can be trusted.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
