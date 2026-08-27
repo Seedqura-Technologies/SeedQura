@@ -13,6 +13,9 @@ type Chapter = {
   name: string;
   line: string;
   src: string;
+  /** Lighter encode for phones — keeps scroll smooth */
+  srcMobile: string;
+  poster: string;
   rate: number;
 };
 
@@ -23,7 +26,9 @@ const chapters: Chapter[] = [
     name: "NeuroVision",
     line: "Pre-op — comprehend the aneurysm space",
     src: "/neurovision-3d.mp4",
-    rate: 1.15,
+    srcMobile: "/neurovision-3d-720.mp4",
+    poster: "/neurovision-3d-poster.jpg",
+    rate: 1.1,
   },
   {
     id: "ar",
@@ -31,7 +36,9 @@ const chapters: Chapter[] = [
     name: "NeuroVision",
     line: "AR — overlay for surgery and training",
     src: "/neurovision-ar.mp4",
-    rate: 1.2,
+    srcMobile: "/neurovision-ar-720.mp4",
+    poster: "/neurovision-ar-poster.jpg",
+    rate: 1.1,
   },
   {
     id: "sampoorna",
@@ -39,7 +46,10 @@ const chapters: Chapter[] = [
     name: "Sampoorna",
     line: "Women’s health — one companion, not five apps",
     src: "/sampoorna-reel.mp4",
-    rate: 1.35,
+    srcMobile: "/sampoorna-reel-720.mp4",
+    poster: "/sampoorna-reel-poster.jpg",
+    // Speed already baked into the encode — don't stack more blur
+    rate: 1,
   },
 ];
 
@@ -132,21 +142,29 @@ export function NeuroVision() {
               ref={(el) => {
                 videoRefs.current[i] = el;
               }}
-              src={c.src}
+              poster={c.poster}
               className="absolute inset-0 h-full w-full object-cover"
               style={{
                 opacity: i === active ? 1 : 0,
-                transform: i === active && locked ? "scale(1.04)" : "scale(1.01)",
-                filter: "brightness(0.55) contrast(1.06) saturate(0.92)",
-                transition:
-                  "opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1), transform 1.1s cubic-bezier(0.22, 1, 0.36, 1)",
+                // Avoid CSS scale-up — it softens a sharp encode
+                transform: "translateZ(0)",
+                filter: "brightness(0.72) contrast(1.04) saturate(0.95)",
+                transition: "opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1)",
               }}
               loop
               muted
               playsInline
-              preload="metadata"
+              // Only the active chapter should buffer hard; others stay light
+              preload={i === active ? "auto" : "metadata"}
               aria-hidden
-            />
+            >
+              <source
+                src={c.srcMobile}
+                type="video/mp4"
+                media="(max-width: 768px)"
+              />
+              <source src={c.src} type="video/mp4" />
+            </video>
           ))}
 
           {/* Continuous vignette — matches hero black */}
