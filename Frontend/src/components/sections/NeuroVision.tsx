@@ -91,7 +91,10 @@ export function NeuroVision() {
   useEffect(() => {
     videoRefs.current.forEach((v, i) => {
       if (!v) return;
-      if (i === active && locked) {
+      const reduced = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
+      if (i === active && locked && !reduced) {
         v.playbackRate = chapters[i].rate;
         v.play().catch(() => {});
       } else {
@@ -141,7 +144,7 @@ export function NeuroVision() {
               loop
               muted
               playsInline
-              preload={i === 0 ? "auto" : "metadata"}
+              preload="metadata"
               aria-hidden
             />
           ))}

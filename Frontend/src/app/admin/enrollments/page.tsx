@@ -66,6 +66,12 @@ export default function AdminEnrollmentsPage() {
   }, [filter, load]);
 
   async function setStatus(id: string, status: string) {
+    if (status === "active") {
+      const ok = window.confirm(
+        "Approve this enrollment? The student will get access and an email."
+      );
+      if (!ok) return;
+    }
     setBusyId(id);
     setError("");
     try {
@@ -78,6 +84,14 @@ export default function AdminEnrollmentsPage() {
       setError(err instanceof Error ? err.message : "Update failed");
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function copyUtr(utr: string) {
+    try {
+      await navigator.clipboard.writeText(utr);
+    } catch {
+      setError("Couldn’t copy UTR — select it manually.");
     }
   }
 
@@ -144,13 +158,22 @@ export default function AdminEnrollmentsPage() {
                     <td className="px-4 py-3">
                       <div>{e.course?.name}</div>
                       <div className="text-xs text-muted">
-                        {formatAmount(pay?.amount, pay?.currency)}
+                        Expected: {formatAmount(pay?.amount, pay?.currency)}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-mono text-sm tracking-wide">
-                        {e.utr || "—"}
-                      </span>
+                      {e.utr ? (
+                        <button
+                          type="button"
+                          className="font-mono text-sm tracking-wide text-accent hover:text-text"
+                          title="Click to copy"
+                          onClick={() => copyUtr(e.utr!)}
+                        >
+                          {e.utr}
+                        </button>
+                      ) : (
+                        <span className="font-mono text-sm tracking-wide">—</span>
+                      )}
                       {e.utr_submitted_at && (
                         <div className="mt-1 text-xs text-muted">
                           {new Date(e.utr_submitted_at).toLocaleString()}

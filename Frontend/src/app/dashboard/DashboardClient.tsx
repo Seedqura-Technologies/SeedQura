@@ -26,6 +26,24 @@ type Enrollment = {
   course: Course | null;
 };
 
+function enrollmentLabel(status: string, paymentStatus: string): string {
+  if (paymentStatus === "awaiting_verification") return "Pending verification";
+  if (status === "active" && paymentStatus === "paid") return "Active";
+  if (status === "rejected") return "Not approved";
+  if (status === "pending_payment") return "Payment pending";
+  if (status === "refunded") return "Refunded";
+  return status.replaceAll("_", " ");
+}
+
+function paymentLabel(paymentStatus: string): string {
+  if (paymentStatus === "awaiting_verification") return "Awaiting verification";
+  if (paymentStatus === "paid") return "Paid";
+  if (paymentStatus === "failed") return "Couldn’t verify";
+  if (paymentStatus === "pending") return "Pending";
+  if (paymentStatus === "refunded") return "Refunded";
+  return paymentStatus.replaceAll("_", " ");
+}
+
 type Notification = {
   id: string;
   type: string;
@@ -344,9 +362,7 @@ export function StudentDashboard() {
                   <p className="mt-2 text-sm text-muted">
                     Enrollment:{" "}
                     <span className="text-text">
-                      {e.payment_status === "awaiting_verification"
-                        ? "Pending verification"
-                        : e.status}
+                      {enrollmentLabel(e.status, e.payment_status)}
                     </span>
                     {" · "}
                     Payment:{" "}
@@ -354,12 +370,13 @@ export function StudentDashboard() {
                       className={
                         e.payment_status === "awaiting_verification"
                           ? "text-amber-400"
-                          : "text-text"
+                          : e.payment_status === "failed" ||
+                              e.status === "rejected"
+                            ? "text-error"
+                            : "text-text"
                       }
                     >
-                      {e.payment_status === "awaiting_verification"
-                        ? "Awaiting verification"
-                        : e.payment_status}
+                      {paymentLabel(e.payment_status)}
                     </span>
                     {" · "}
                     Progress:{" "}
@@ -368,7 +385,22 @@ export function StudentDashboard() {
                   {e.payment_status === "awaiting_verification" && (
                     <p className="mt-2 text-sm text-muted">
                       We&apos;re verifying your UTR. Access unlocks after
-                      approval (usually within a few hours).
+                      approval (usually within a few hours). If it&apos;s not
+                      unlocked within 24 hours, email
+                      gethelp.seedqura@gmail.com — do not pay again.
+                    </p>
+                  )}
+                  {(e.status === "rejected" ||
+                    e.payment_status === "failed") && (
+                    <p className="mt-2 text-sm text-muted">
+                      We couldn&apos;t match your UTR. Email{" "}
+                      <a
+                        href="mailto:gethelp.seedqura@gmail.com"
+                        className="text-accent hover:text-text"
+                      >
+                        gethelp.seedqura@gmail.com
+                      </a>{" "}
+                      — do not pay again.
                     </p>
                   )}
                 </div>
@@ -392,9 +424,9 @@ export function StudentDashboard() {
                 </MagneticButton>
                 )}
                 {e.payment_status === "awaiting_verification" && (
-                  <MagneticButton href="/dashboard?tab=purchased" variant="secondary">
+                  <span className="inline-flex items-center rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-300">
                     Pending verification
-                  </MagneticButton>
+                  </span>
                 )}
                 <MagneticButton
                   href="#"

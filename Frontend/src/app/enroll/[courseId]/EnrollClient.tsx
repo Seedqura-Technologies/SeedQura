@@ -16,7 +16,7 @@ type CourseInfo = {
   price_display: string | null;
 };
 
-type Step = "terms" | "details" | "pay" | "done";
+type Step = "terms" | "details" | "pay" | "done" | "already_pending";
 
 const DEGREES = [
   "MBBS",
@@ -43,15 +43,18 @@ const YEARS = [
   "Other",
 ] as const;
 
+/** Exact QR map — never fall back to a wrong amount-locked QR. */
+const QR_BY_PRICE: Record<number, { src: string; label: string }> = {
+  4999: { src: "/payments/upi-4999.jpg", label: "₹4,999" },
+  19999: { src: "/payments/upi-19999.jpg", label: "₹19,999" },
+};
+
 function qrForPrice(priceInr: number | null | undefined): {
   src: string;
   label: string;
-} {
-  const p = priceInr ?? 0;
-  if (p >= 15000) {
-    return { src: "/payments/upi-19999.jpg", label: "₹19,999" };
-  }
-  return { src: "/payments/upi-4999.jpg", label: "₹4,999" };
+} | null {
+  if (priceInr == null) return null;
+  return QR_BY_PRICE[priceInr] ?? null;
 }
 
 function formatInr(amount: number | null | undefined): string {
@@ -61,6 +64,12 @@ function formatInr(amount: number | null | undefined): string {
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+function maskUtr(utr: string): string {
+  const u = utr.trim();
+  if (u.length <= 6) return "••••••";
+  return `${u.slice(0, 3)}••••${u.slice(-3)}`;
 }
 
 export function EnrollClient({ courseId }: Props) {
@@ -79,14 +88,14 @@ export function EnrollClient({ courseId }: Props) {
   const [yearOfStudy, setYearOfStudy] = useState("");
   const [utr, setUtr] = useState("");
   const [doneMessage, setDoneMessage] = useState("");
+  const [pendingUtr, setPendingUtr] = useState<string | null>(null);
+  const [pendingAt, setPendingAt] = useState<string | null>(null);
+  const [allowResubmit, setAllowResubmit] = useState(false);
 
   const upiId =
     process.env.NEXT_PUBLIC_UPI_ID?.trim() || "ansulsingh67890-1@oksbi";
 
-  const qr = useMemo(
-    () => qrForPrice(course?.price_inr),
-    [course?.price_inr]
-  );
+  const qr = useMemo(() => qrForPrice(course?.price_inr), [course?.price_inr]);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,6 +110,24 @@ export function EnrollClient({ courseId }: Props) {
         const profile = meRes?.profile;
         if (profile?.full_name) setFullName(profile.full_name);
         if (profile?.phone) setPhone(String(profile.phone));
+
+        const existing = (meRes?.enrollments || []).find(
+          (e: {
+            course_id?: string;
+            course?: { id?: string };
+            payment_status?: string;
+            status?: string;
+            utr?: string | null;
+            utr_submitted_at?: string | null;
+          }) =>
+            (e.course_id === courseId || e.course?.id === courseId) &&
+            e.payment_status === "awaiting_verification"
+        );
+        if (existing && !allowResubmit) {
+          setPendingUtr(existing.utr || null);
+          setPendingAt(existing.utr_submitted_at || null);
+          setStep("already_pending");
+        }
       } catch (err) {
         if (!cancelled) {
           setLoadError(
@@ -112,7 +139,7 @@ export function EnrollClient({ courseId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [courseId]);
+  }, [courseId, allowResubmit]);
 
   function goDetails() {
     setConsentError("");
@@ -174,7 +201,10 @@ export function EnrollClient({ courseId }: Props) {
       );
       setStep("done");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Submit failed");
+      const raw = err instanceof Error ? err.message : "Submit failed";
+      setError(
+        `${raw} Your payment is safe — do not pay again. Email gethelp.seedqura@gmail.com with your UTR if this continues.`
+      );
     } finally {
       setLoading(false);
     }
@@ -205,6 +235,61 @@ export function EnrollClient({ courseId }: Props) {
     );
   }
 
+  if (step === "already_pending") {
+    return (
+      <div className="mx-auto max-w-lg text-center">
+        <h1 className="text-3xl font-medium tracking-tight text-text">
+          Already submitted
+        </h1>
+        <p className="mt-6 text-sm leading-relaxed text-muted">
+          We already have a UTR for <span className="text-text">{course.name}</span>
+          {pendingUtr ? (
+            <>
+              {" "}
+              (<span className="font-mono text-text">{maskUtr(pendingUtr)}</span>)
+            </>
+          ) : null}
+          . Please wait for verification —{" "}
+          <span className="text-text">do not pay again</span>.
+        </p>
+        {pendingAt && (
+          <p className="mt-2 text-xs text-muted">
+            Submitted {new Date(pendingAt).toLocaleString()}
+          </p>
+        )}
+        <p className="mt-4 text-sm text-muted">
+          If it&apos;s not unlocked within 24 hours, email{" "}
+          <Link
+            href="mailto:gethelp.seedqura@gmail.com"
+            className="text-accent hover:text-text"
+          >
+            gethelp.seedqura@gmail.com
+          </Link>
+          .
+        </p>
+        <div className="mt-8 flex flex-col gap-3">
+          <MagneticButton
+            href="/dashboard?tab=purchased"
+            variant="primary"
+            className="w-full"
+          >
+            Go to dashboard
+          </MagneticButton>
+          <button
+            type="button"
+            className="text-sm text-muted hover:text-text"
+            onClick={() => {
+              setAllowResubmit(true);
+              setStep("terms");
+            }}
+          >
+            I need to submit a different UTR
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (step === "done") {
     return (
       <div className="mx-auto max-w-lg text-center">
@@ -214,7 +299,8 @@ export function EnrollClient({ courseId }: Props) {
         <p className="mt-6 text-sm leading-relaxed text-muted">{doneMessage}</p>
         <p className="mt-3 text-sm text-muted">
           You’ll see <span className="text-text">Pending verification</span> on
-          your dashboard until we approve.
+          your dashboard until we approve. If it&apos;s not unlocked within 24
+          hours, email gethelp.seedqura@gmail.com — do not pay again.
         </p>
         <div className="mt-8 flex flex-col gap-3">
           <MagneticButton
@@ -375,22 +461,33 @@ export function EnrollClient({ courseId }: Props) {
               Pay exactly {formatInr(course.price_inr)}
             </p>
             <p className="mt-2 text-xs leading-relaxed text-muted">
-              Scan the QR with any UPI app. Until Seedqura Technologies LLP
-              banking is ready, payments go to the founder&apos;s UPI — the
-              payer name may show a personal KYC name.
+              Until Seedqura Technologies LLP banking is ready, payments go to
+              the founder&apos;s UPI. You&apos;ll see{" "}
+              <span className="text-text">Ansul</span> (founder, Seedqura
+              Technologies LLP) as the recipient.
             </p>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-white/10 bg-white p-3">
-            <Image
-              src={qr.src}
-              alt={`UPI QR for ${qr.label}`}
-              width={480}
-              height={480}
-              className="mx-auto h-auto w-full max-w-[280px]"
-              priority
-            />
-          </div>
+          {qr ? (
+            <div className="overflow-hidden rounded-xl border border-white/10 bg-white p-3">
+              <Image
+                src={qr.src}
+                alt={`UPI QR for ${qr.label}`}
+                width={480}
+                height={480}
+                className="mx-auto h-auto w-full max-w-[280px]"
+                priority
+              />
+            </div>
+          ) : (
+            <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              QR isn&apos;t available for this amount. Open any UPI app and pay{" "}
+              <span className="font-medium text-text">
+                exactly {formatInr(course.price_inr)}
+              </span>{" "}
+              to the UPI ID below, then paste your UTR.
+            </p>
+          )}
 
           <p className="text-center text-sm text-muted">
             UPI ID:{" "}

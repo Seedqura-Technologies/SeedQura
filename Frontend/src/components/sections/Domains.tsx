@@ -79,7 +79,7 @@ export function Domains() {
           return (
             <ScrollReveal key={s.id} delay={i * 0.06}>
               <article
-                id={s.id}
+                id={s.id === "neurovision" ? "system-neurovision" : s.id}
                 className="relative border-t border-white/6 overflow-hidden"
               >
                 {s.background ? (

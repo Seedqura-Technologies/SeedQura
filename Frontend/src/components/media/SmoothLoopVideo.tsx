@@ -20,6 +20,7 @@ type Props = {
 /**
  * Muted autoplay loop that starts only when on-screen —
  * avoids decode jank offscreen and keeps the page smooth.
+ * Poster stays visible until the first frame is ready (no black gap).
  */
 export function SmoothLoopVideo({
   src,
@@ -66,13 +67,18 @@ export function SmoothLoopVideo({
     }
   }, [active, ready]);
 
+  function markReady() {
+    setReady(true);
+  }
+
   return (
     <video
       ref={ref}
       className={className}
       style={{
         ...style,
-        opacity: ready ? style?.opacity ?? 1 : 0,
+        // Keep poster visible; only fade slightly until first frame
+        opacity: ready ? (style?.opacity ?? 1) : poster ? 1 : 0,
         transform:
           drift && active
             ? "scale(1.045)"
@@ -88,8 +94,9 @@ export function SmoothLoopVideo({
       disablePictureInPicture
       aria-label={ariaLabel}
       aria-hidden={ariaLabel ? undefined : true}
-      onLoadedData={() => setReady(true)}
-      onCanPlay={() => setReady(true)}
+      onLoadedMetadata={markReady}
+      onLoadedData={markReady}
+      onCanPlay={markReady}
     >
       {srcMobile ? (
         <source src={srcMobile} type="video/mp4" media="(max-width: 768px)" />
