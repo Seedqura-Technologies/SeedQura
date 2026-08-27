@@ -13,6 +13,8 @@ type Chapter = {
   name: string;
   line: string;
   src: string;
+  srcMobile?: string;
+  poster?: string;
   rate: number;
 };
 
@@ -39,7 +41,9 @@ const chapters: Chapter[] = [
     name: "Sampoorna",
     line: "Women’s health — one companion, not five apps",
     src: "/sampoorna.mp4",
-    rate: 1.35,
+    srcMobile: "/sampoorna-720.mp4",
+    poster: "/sampoorna-poster.jpg",
+    rate: 1,
   },
 ];
 
@@ -129,21 +133,33 @@ export function NeuroVision() {
               ref={(el) => {
                 videoRefs.current[i] = el;
               }}
-              src={c.src}
               className="absolute inset-0 h-full w-full object-cover"
               style={{
                 opacity: i === active ? 1 : 0,
                 transform: i === active && locked ? "scale(1.04)" : "scale(1.01)",
-                filter: "brightness(0.55) contrast(1.06) saturate(0.92)",
+                filter:
+                  c.id === "sampoorna"
+                    ? "brightness(0.62) contrast(1.05) saturate(0.96)"
+                    : "brightness(0.55) contrast(1.06) saturate(0.92)",
                 transition:
                   "opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1), transform 1.1s cubic-bezier(0.22, 1, 0.36, 1)",
               }}
+              poster={c.poster}
               loop
               muted
               playsInline
               preload={i === 0 ? "auto" : "metadata"}
               aria-hidden
-            />
+            >
+              {c.srcMobile ? (
+                <source
+                  src={c.srcMobile}
+                  type="video/mp4"
+                  media="(max-width: 768px)"
+                />
+              ) : null}
+              <source src={c.src} type="video/mp4" />
+            </video>
           ))}
 
           {/* Continuous vignette — matches hero black */}
