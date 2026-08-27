@@ -12,7 +12,11 @@ const systems = [
     body: "Surgeons still plan from flat slices. NeuroVision reconstructs cerebral vasculature in 3D for pre-op comprehension, overlays AR for surgery and training, and uses ML to help surface what matters — for clinicians and for students learning the anatomy.",
     cta: "Discuss a pilot",
     align: "left" as const,
-    video: null as null | { src: string; srcMobile: string; poster: string },
+    background: null as null | {
+      src: string;
+      srcMobile: string;
+      poster: string;
+    },
   },
   {
     id: "sampoorna",
@@ -22,7 +26,7 @@ const systems = [
     body: "Period trackers, PCOS tools, habit apps, and breast-health pathways live in silos. Sampoorna is the combined companion: continuity across cycles, habits, and clinical pathways — built with dignity, not wellness clichés.",
     cta: "Talk about Sampoorna",
     align: "right" as const,
-    video: {
+    background: {
       src: "/sampoorna.mp4",
       srcMobile: "/sampoorna-720.mp4",
       poster: "/sampoorna-poster.jpg",
@@ -69,70 +73,52 @@ export function Domains() {
         </ScrollReveal>
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      <div className="relative">
         {systems.map((s, i) => {
           const right = s.align === "right";
           return (
             <ScrollReveal key={s.id} delay={i * 0.06}>
               <article
                 id={s.id}
-                className={`border-t border-white/6 py-20 md:py-28 ${
-                  s.video
-                    ? ""
-                    : right
-                      ? "md:flex md:justify-end"
-                      : ""
-                }`}
+                className="relative border-t border-white/6 overflow-hidden"
               >
-                {s.video ? (
-                  <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-14">
-                    <div
-                      className={`relative overflow-hidden rounded-sm lg:col-span-7 ${
-                        right ? "lg:order-1" : ""
-                      }`}
+                {s.background ? (
+                  <div className="pointer-events-none absolute inset-0" aria-hidden>
+                    <SmoothLoopVideo
+                      src={s.background.src}
+                      srcMobile={s.background.srcMobile}
+                      poster={s.background.poster}
+                      drift
+                      className="absolute inset-0 h-full w-full object-cover"
                       style={{
-                        aspectRatio: "16 / 10",
-                        background: "#0a0a0a",
-                        boxShadow: "0 0 0 1px rgba(255,255,255,0.06)",
+                        // Quiet atmosphere only — text stays the hero
+                        filter: "brightness(0.28) contrast(1.05) saturate(0.75)",
+                        opacity: 1,
                       }}
-                    >
-                      <SmoothLoopVideo
-                        src={s.video.src}
-                        srcMobile={s.video.srcMobile}
-                        poster={s.video.poster}
-                        drift
-                        className="absolute inset-0 h-full w-full object-cover"
-                        style={{
-                          filter:
-                            "brightness(0.88) contrast(1.04) saturate(0.95)",
-                        }}
-                        aria-label={`${s.name} product film`}
-                      />
-                      <div
-                        className="pointer-events-none absolute inset-0"
-                        aria-hidden
-                        style={{
-                          background: `
-                            linear-gradient(to top, rgba(8,8,8,0.55) 0%, transparent 42%),
-                            radial-gradient(ellipse 70% 55% at 50% 40%, transparent 0%, rgba(8,8,8,0.28) 100%)
-                          `,
-                        }}
-                      />
-                    </div>
-
+                    />
                     <div
-                      className={`max-w-xl lg:col-span-5 ${
-                        right ? "lg:order-2 md:text-right lg:ml-auto" : ""
-                      }`}
-                    >
-                      <SystemCopy s={s} right={right} />
-                    </div>
+                      className="absolute inset-0"
+                      style={{
+                        // Text sits on the right — keep that side darker for contrast
+                        background: `
+                          linear-gradient(to right, rgba(8,8,8,0.35) 0%, rgba(8,8,8,0.72) 48%, rgba(8,8,8,0.94) 100%),
+                          linear-gradient(to top, #080808 0%, transparent 40%),
+                          linear-gradient(to bottom, #080808 0%, transparent 28%)
+                        `,
+                      }}
+                    />
                   </div>
-                ) : (
+                ) : null}
+
+                <div
+                  className={`relative mx-auto max-w-6xl px-4 py-20 sm:px-6 md:py-28 lg:px-8 ${
+                    right ? "md:flex md:justify-end" : ""
+                  }`}
+                >
                   <div className={`max-w-xl ${right ? "md:text-right" : ""}`}>
                     <SystemCopy s={s} right={right} />
                   </div>
-                )}
+                </div>
               </article>
             </ScrollReveal>
           );
