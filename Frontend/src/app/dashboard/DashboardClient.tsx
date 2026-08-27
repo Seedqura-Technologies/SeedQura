@@ -342,17 +342,39 @@ export function StudentDashboard() {
                     {e.course?.name || "Course"}
                   </h2>
                   <p className="mt-2 text-sm text-muted">
-                    Enrollment: <span className="text-text">{e.status}</span>
+                    Enrollment:{" "}
+                    <span className="text-text">
+                      {e.payment_status === "awaiting_verification"
+                        ? "Pending verification"
+                        : e.status}
+                    </span>
                     {" · "}
-                    Payment: <span className="text-text">{e.payment_status}</span>
+                    Payment:{" "}
+                    <span
+                      className={
+                        e.payment_status === "awaiting_verification"
+                          ? "text-amber-400"
+                          : "text-text"
+                      }
+                    >
+                      {e.payment_status === "awaiting_verification"
+                        ? "Awaiting verification"
+                        : e.payment_status}
+                    </span>
                     {" · "}
                     Progress:{" "}
                     <span className="text-text">{e.progress_pct}%</span>
                   </p>
+                  {e.payment_status === "awaiting_verification" && (
+                    <p className="mt-2 text-sm text-muted">
+                      We&apos;re verifying your UTR. Access unlocks after
+                      approval (usually within a few hours).
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
-                {e.course?.id && (
+                {e.status === "active" && e.payment_status === "paid" && e.course?.id && (
                   <MagneticButton
                     href="/dashboard"
                     variant="secondary"
@@ -360,6 +382,7 @@ export function StudentDashboard() {
                     View upcoming sessions
                   </MagneticButton>
                 )}
+                {e.status === "active" && e.payment_status === "paid" && (
                 <MagneticButton
                   href="#"
                   variant="secondary"
@@ -367,6 +390,12 @@ export function StudentDashboard() {
                 >
                   Learning materials (soon)
                 </MagneticButton>
+                )}
+                {e.payment_status === "awaiting_verification" && (
+                  <MagneticButton href="/dashboard?tab=purchased" variant="secondary">
+                    Pending verification
+                  </MagneticButton>
+                )}
                 <MagneticButton
                   href="#"
                   variant="secondary"

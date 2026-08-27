@@ -126,7 +126,7 @@ create table if not exists public.enrollments (
   status text not null default 'pending_payment'
     check (status in ('pending_payment', 'active', 'rejected', 'refunded')),
   payment_status text not null default 'pending'
-    check (payment_status in ('pending', 'paid', 'failed', 'refunded')),
+    check (payment_status in ('pending', 'awaiting_verification', 'paid', 'failed', 'refunded')),
   progress_pct integer not null default 0 check (progress_pct between 0 and 100),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -140,6 +140,59 @@ alter table public.enrollments add column if not exists calendar_sync_status tex
 alter table public.enrollments add column if not exists calendar_synced_at timestamptz;
 alter table public.enrollments add column if not exists calendar_sync_error text;
 alter table public.enrollments add column if not exists calendar_sync_attempted_at timestamptz;
+alter table public.enrollments add column if not exists utr text;
+alter table public.enrollments add column if not exists institution text;
+alter table public.enrollments add column if not exists degree text;
+alter table public.enrollments add column if not exists year_of_study text;
+alter table public.enrollments add column if not exists applicant_phone text;
+alter table public.enrollments add column if not exists applicant_name text;
+alter table public.enrollments add column if not exists utr_submitted_at timestamptz;
+
+do $$
+declare
+  r record;
+begin
+  for r in
+    select c.conname
+    from pg_constraint c
+    join pg_class t on c.conrelid = t.oid
+    join pg_namespace n on t.relnamespace = n.oid
+    where n.nspname = 'public'
+      and t.relname = 'enrollments'
+      and c.contype = 'c'
+      and pg_get_constraintdef(c.oid) ilike '%payment_status%'
+  loop
+    execute format(
+      'alter table public.enrollments drop constraint %I',
+      r.conname
+    );
+  end loop;
+
+  begin
+    alter table public.enrollments
+      add constraint enrollments_payment_status_check
+      check (
+        payment_status in (
+          'pending',
+          'awaiting_verification',
+          'paid',
+          'failed',
+          'refunded'
+        )
+      );
+  exception
+    when duplicate_object then null;
+  end;
+end $$;
+
+create index if not exists enrollments_utr_idx
+  on public.enrollments (utr)
+  where utr is not null and utr <> '';
+
+create index if not exists enrollments_awaiting_verification_idx
+  on public.enrollments (payment_status, created_at desc)
+  where payment_status = 'awaiting_verification';
+
 update public.enrollments set payment_status = coalesce(payment_status, 'pending');
 update public.enrollments set progress_pct = coalesce(progress_pct, 0);
 update public.enrollments set updated_at = coalesce(updated_at, created_at, now());

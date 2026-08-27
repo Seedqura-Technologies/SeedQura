@@ -17,6 +17,7 @@
     "db:migrate:session-cancellation": "tsx scripts/migrate-session-cancellation.ts",
     "db:migrate:session-reschedule": "tsx scripts/migrate-session-reschedule.ts",
     "db:migrate:enrollment-calendar-sync": "tsx scripts/migrate-enrollment-calendar-sync.ts",
+    "db:migrate:utr-enroll": "tsx scripts/migrate-utr-enroll.ts",
     "db:migrate:session-calendar-sync-retry": "tsx scripts/migrate-session-calendar-sync-retry.ts",
     "db:migrate:session-student-read-policy": "tsx scripts/migrate-session-student-read-policy.ts",
     "test": "tsx --test src/lib/schedule-generator.test.ts src/lib/course-students.test.ts src/lib/schedule-email.test.ts src/lib/google-calendar.test.ts src/lib/ics.test.ts src/lib/student-course-calendar.test.ts src/lib/session-edit.test.ts src/lib/session-cancel.test.ts src/lib/session-reschedule.test.ts src/lib/enrollment-calendar-sync.test.ts src/lib/session-calendar-retry.test.ts src/lib/schedule-dashboard.test.ts src/lib/notifications.test.ts",

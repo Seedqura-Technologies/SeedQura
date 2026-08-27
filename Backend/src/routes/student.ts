@@ -205,14 +205,15 @@ studentRouter.post(
 studentRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
   try {
     const admin = getSupabaseAdmin();
-    const profile = req.profile!;
+    const baseProfile = req.profile!;
 
     const enrollmentsSelect =
       "id, status, payment_status, progress_pct, course_id, created_at, course:courses(id, name, description, duration, schedule_summary, price_display, price_inr, display_status, featured)";
     const notificationsSelect =
       "id, title, body, read_at, created_at, type, metadata";
 
-    const [enrollmentsResult, notificationsResult] = await Promise.all([
+    const [enrollmentsResult, notificationsResult, profileResult] =
+      await Promise.all([
       admin
         .from("enrollments")
         .select(enrollmentsSelect)
@@ -224,7 +225,19 @@ studentRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
         .eq("user_id", req.userId!)
         .order("created_at", { ascending: false })
         .limit(30),
+      admin
+        .from("profiles")
+        .select("id, full_name, email, role, phone")
+        .eq("id", req.userId!)
+        .maybeSingle(),
     ]);
+
+    const profile = {
+      ...baseProfile,
+      phone: profileResult.data?.phone ?? null,
+      full_name: profileResult.data?.full_name ?? baseProfile.full_name,
+      email: profileResult.data?.email ?? baseProfile.email,
+    };
 
     if (enrollmentsResult.error) throw enrollmentsResult.error;
 
@@ -232,7 +245,7 @@ studentRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
     const notifications = notificationsResult.data ?? [];
 
     const activeCourseIds = enrollments
-      .filter((e) => e.status === "active")
+      .filter((e) => e.status === "active" && e.payment_status === "paid")
       .map((e) => e.course_id)
       .filter(Boolean);
 

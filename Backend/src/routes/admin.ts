@@ -291,7 +291,7 @@ adminRouter.delete("/courses/:id", async (req, res) => {
 adminRouter.get("/enrollments", async (req, res) => {
   try {
     const status = String(req.query.status || "").trim();
-    const paymentStatus = String(req.query.payment_status || "paid").trim();
+    const paymentStatus = String(req.query.payment_status || "awaiting_verification").trim();
     const admin = getSupabaseAdmin();
     let query = admin
       .from("enrollments")
@@ -300,7 +300,7 @@ adminRouter.get("/enrollments", async (req, res) => {
       )
       .order("created_at", { ascending: false });
 
-    // Default: only successfully paid enrollments
+    // Default: UTR queue awaiting manual verification
     if (paymentStatus && paymentStatus !== "all") {
       query = query.eq("payment_status", paymentStatus);
     }
@@ -323,13 +323,46 @@ adminRouter.patch("/enrollments/:id", async (req, res) => {
       return;
     }
     const admin = getSupabaseAdmin();
+    const now = new Date().toISOString();
+
+    // Load current row so UTR approve can flip payment_status → paid
+    const { data: before, error: beforeErr } = await admin
+      .from("enrollments")
+      .select("id, user_id, course_id, payment_status, status")
+      .eq("id", req.params.id)
+      .maybeSingle();
+    if (beforeErr) throw beforeErr;
+    if (!before) {
+      res.status(404).json({ error: "Enrollment not found" });
+      return;
+    }
+
+    const patch: Record<string, unknown> = {
+      status,
+      updated_at: now,
+    };
+    if (status === "active") {
+      patch.payment_status = "paid";
+    }
+    if (status === "rejected" && before.payment_status === "awaiting_verification") {
+      patch.payment_status = "failed";
+    }
+
     const { data: enrollment, error } = await admin
       .from("enrollments")
-      .update({ status, updated_at: new Date().toISOString() })
+      .update(patch)
       .eq("id", req.params.id)
       .select("*, course:courses(name), profile:profiles(full_name, email)")
       .single();
     if (error) throw error;
+
+    if (status === "active") {
+      await admin
+        .from("payments")
+        .update({ status: "paid", updated_at: now })
+        .eq("enrollment_id", enrollment.id)
+        .neq("status", "paid");
+    }
 
     if (status === "active" || status === "rejected") {
       const email = (enrollment as any).profile?.email;
@@ -353,11 +386,7 @@ adminRouter.patch("/enrollments/:id", async (req, res) => {
       });
     }
 
-    if (
-      status === "active" &&
-      enrollment.payment_status === "paid" &&
-      enrollment.course_id
-    ) {
+    if (status === "active" && enrollment.course_id) {
       void syncEnrollmentCalendar(enrollment.id).catch((err) => {
         console.error("[admin/enrollments] calendar sync failed", err);
       });

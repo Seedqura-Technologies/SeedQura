@@ -581,3 +581,217 @@ paymentsRouter.post("/webhook", async (req, res) => {
     res.status(500).json({ error: "Webhook failed" });
   }
 });
+
+function normalizeUtr(raw: string): string {
+  return String(raw || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+}
+
+/**
+ * Interim founder-UPI flow: student pays via QR, pastes UTR, waits for admin approve.
+ */
+paymentsRouter.post("/utr-submit", requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    const courseId = String(req.body?.courseId || "").trim();
+    const utr = normalizeUtr(req.body?.utr || "");
+    const applicantName = String(req.body?.fullName || "").trim();
+    const institution = String(req.body?.institution || "").trim();
+    const degree = String(req.body?.degree || "").trim();
+    const yearOfStudy = String(req.body?.yearOfStudy || "").trim();
+    const applicantPhone = String(req.body?.phone || "").trim();
+
+    if (!courseId) {
+      res.status(400).json({ error: "courseId required" });
+      return;
+    }
+    if (utr.length < 8 || utr.length > 64 || !/^[A-Z0-9]+$/.test(utr)) {
+      res.status(400).json({
+        error: "Enter a valid UTR / UPI transaction ID (letters and numbers only).",
+      });
+      return;
+    }
+    if (applicantName.length < 2) {
+      res.status(400).json({ error: "Full name is required" });
+      return;
+    }
+    if (institution.length < 2) {
+      res.status(400).json({ error: "College / institution is required" });
+      return;
+    }
+    if (!degree) {
+      res.status(400).json({ error: "Degree is required" });
+      return;
+    }
+    if (!yearOfStudy) {
+      res.status(400).json({ error: "Year of study is required" });
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(applicantPhone.replace(/\s/g, ""))) {
+      res.status(400).json({ error: "Enter a valid 10-digit Indian mobile number" });
+      return;
+    }
+
+    const admin = getSupabaseAdmin();
+    const userId = req.userId!;
+    const phone = applicantPhone.replace(/\s/g, "");
+
+    const [{ data: course, error: cErr }, { data: existing }, { data: utrTaken }] =
+      await Promise.all([
+        admin
+          .from("courses")
+          .select(COURSE_ORDER_FIELDS)
+          .eq("id", courseId)
+          .eq("status", "published")
+          .maybeSingle(),
+        admin
+          .from("enrollments")
+          .select("id, status, payment_status")
+          .eq("user_id", userId)
+          .eq("course_id", courseId)
+          .maybeSingle(),
+        admin
+          .from("enrollments")
+          .select("id, user_id")
+          .eq("utr", utr)
+          .maybeSingle(),
+      ]);
+
+    if (cErr) throw cErr;
+    if (!course) {
+      res.status(404).json({ error: "Course not found" });
+      return;
+    }
+    if (course.price_inr == null || course.price_inr <= 0) {
+      res.status(400).json({ error: "Course is not available for purchase" });
+      return;
+    }
+    if (
+      course.registration_deadline &&
+      new Date(course.registration_deadline) < new Date()
+    ) {
+      res.status(400).json({ error: "Registration deadline has passed" });
+      return;
+    }
+
+    if (existing?.status === "active" && existing.payment_status === "paid") {
+      res.status(400).json({ error: "Already enrolled in this course" });
+      return;
+    }
+
+    if (utrTaken && utrTaken.user_id !== userId) {
+      res.status(400).json({ error: "This UTR is already linked to another enrollment" });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const enrollmentPayload = {
+      status: "pending_payment",
+      payment_status: "awaiting_verification",
+      utr,
+      institution,
+      degree,
+      year_of_study: yearOfStudy,
+      applicant_phone: phone,
+      applicant_name: applicantName,
+      utr_submitted_at: now,
+      updated_at: now,
+    };
+
+    let enrollmentId = existing?.id;
+    if (!enrollmentId) {
+      const { data: created, error: eErr } = await admin
+        .from("enrollments")
+        .insert({
+          user_id: userId,
+          course_id: courseId,
+          ...enrollmentPayload,
+        })
+        .select("id")
+        .single();
+      if (eErr) throw eErr;
+      enrollmentId = created.id;
+    } else {
+      const { error: uErr } = await admin
+        .from("enrollments")
+        .update(enrollmentPayload)
+        .eq("id", enrollmentId);
+      if (uErr) throw uErr;
+    }
+
+    // Keep profile in sync for admin readability
+    await admin
+      .from("profiles")
+      .update({
+        full_name: applicantName,
+        phone,
+        updated_at: now,
+      })
+      .eq("id", userId);
+
+    const amountPaise = course.price_inr * 100;
+    const { data: existingPay } = await admin
+      .from("payments")
+      .select("id")
+      .eq("enrollment_id", enrollmentId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const paymentRaw = {
+      method: "upi_utr",
+      utr,
+      applicantName,
+      institution,
+      degree,
+      yearOfStudy,
+      phone,
+    };
+
+    if (existingPay?.id) {
+      await admin
+        .from("payments")
+        .update({
+          amount: amountPaise,
+          currency: course.currency || "INR",
+          status: "created",
+          raw: paymentRaw,
+          updated_at: now,
+        })
+        .eq("id", existingPay.id);
+    } else {
+      const { error: pErr } = await admin.from("payments").insert({
+        enrollment_id: enrollmentId,
+        amount: amountPaise,
+        currency: course.currency || "INR",
+        status: "created",
+        raw: paymentRaw,
+      });
+      if (pErr) throw pErr;
+    }
+
+    runBackground(
+      "utr-notify",
+      createNotification({
+        userId,
+        type: "utr_submitted",
+        title: "Payment submitted",
+        body: `UTR received for ${course.name}. We’ll verify and unlock access shortly.`,
+        metadata: { courseId, enrollmentId, utr },
+      })
+    );
+
+    res.json({
+      ok: true,
+      enrollmentId,
+      status: "pending_payment",
+      payment_status: "awaiting_verification",
+      message:
+        "Submitted — we’ll verify your UTR and unlock access (usually within a few hours).",
+    });
+  } catch (err) {
+    console.error("[payments/utr-submit]", err);
+    res.status(500).json({ error: "Failed to submit UTR enrollment" });
+  }
+});
