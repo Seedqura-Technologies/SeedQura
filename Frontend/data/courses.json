@@ -3,8 +3,8 @@
     {
       "id": "frameworks-lab",
       "name": "Frameworks Lab",
-      "tagline": "See with code. Ship vision projects.",
-      "description": "Build end-to-end computer vision skills from raw images and cleaning to classification, detection, and a GitHub portfolio employers can click and run.",
+      "tagline": "See the world in code.",
+      "description": "Build vision systems that run, not slide decks. Leave with projects recruiters can open and run.",
       "category": "Course",
       "level": "Beginner–Intermediate",
       "duration": "4 weeks",
@@ -15,17 +15,16 @@
       "status": "Open",
       "featured": true,
       "features": [
-        "Image pipelines with OpenCV",
-        "Hands-on PyTorch projects",
-        "Classification + detection demos",
-        "Portfolio-ready GitHub repos"
+        "Runnable vision projects",
+        "GitHub portfolio employers can run",
+        "Images to live models"
       ]
     },
     {
       "id": "signal-lab",
       "name": "Signal Lab",
-      "tagline": "From business question to deployed model.",
-      "description": "Go from a real business problem to clean data, trained models, and a live prediction API, then package the full workflow as a GitHub portfolio recruiters can run.",
+      "tagline": "Models that answer real questions.",
+      "description": "Frame a business problem, train a model, deploy it live. One portfolio that proves the full loop.",
       "category": "Course",
       "level": "Beginner–Intermediate",
       "duration": "4 weeks",
@@ -36,17 +35,16 @@
       "status": "Open",
       "featured": true,
       "features": [
-        "Business to ML problem framing",
-        "EDA, cleaning & feature craft",
-        "Model training & evaluation",
-        "FastAPI deploy + portfolio"
+        "Live prediction API",
+        "Messy data to trained models",
+        "Question to production on GitHub"
       ]
     },
     {
       "id": "groundtruth-lab",
       "name": "Groundtruth Lab",
-      "tagline": "Label data like a pro. ML-ready handoff.",
-      "description": "Design taxonomies, label real images, run quality checks, and ship documentation an ML engineer can import tomorrow. A GitHub portfolio that proves you belong in AI data ops.",
+      "tagline": "Truth before training.",
+      "description": "Design labels and quality systems ML teams trust. Prove it with a portfolio, not promises.",
       "category": "Course",
       "level": "Beginner",
       "duration": "4 weeks",
@@ -57,31 +55,29 @@
       "status": "Open",
       "featured": true,
       "features": [
-        "Taxonomy & guideline design",
-        "Hands-on Label Studio labeling",
-        "QA scripts & quality checks",
-        "ML handoff docs + portfolio"
+        "Data ML teams trust",
+        "Labels that scale cleanly",
+        "Portfolio proof for data ops"
       ]
     },
     {
       "id": "research-fellowship",
       "name": "Research Fellowship",
-      "tagline": "3-month AI research. Real projects. Real portfolio.",
-      "description": "Work in a 6-person research group on one serious AI problem in healthcare, agriculture, computer vision, or GenAI, and leave with a research-grade project, GitHub, technical report, and publication-oriented manuscript.",
+      "tagline": "Research you can publish.",
+      "description": "Three months in a six-person group on one serious AI problem. Exit with research-grade work, not certificates.",
       "category": "Program",
       "level": "Intermediate–Advanced",
       "duration": "3 months",
-      "format": "Live weekends · research groups of 6",
+      "format": "Live weekends · groups of 6",
       "price": 19999,
       "currency": "INR",
-      "priceDisplay": "₹20,000 · incl. GST",
+      "priceDisplay": "₹19,999 · incl. GST",
       "status": "Applications Open",
       "featured": true,
       "features": [
-        "5 research groups · 30 seats only",
-        "Healthcare · Agri · CV · GenAI tracks",
-        "GitHub + research report + demo day",
-        "Publication-oriented manuscript guidance"
+        "Research-grade project and report",
+        "One domain, one deep problem",
+        "Manuscript-ready publication path"
       ]
     }
   ]

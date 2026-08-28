@@ -74,7 +74,7 @@ insert into public.courses (
     '3 months · 30 seats · 5 research groups · publication-oriented output',
     19999,
     'INR',
-    '₹20,000 · incl. GST',
+    '₹19,999 · incl. GST',
     'published',
     'Applications Open',
     true,

@@ -67,7 +67,7 @@ function AcademyCourseCard({ course, large = false, mark = "leaf" }: CardProps) 
       <Link
         href={detailHref}
         className="absolute inset-0 z-0 rounded-[18px]"
-        aria-label={`View ${course.name} syllabus and details`}
+        aria-label={`View ${course.name} details`}
       />
 
       <div className="academy-card-mark pointer-events-none absolute text-[var(--academy-sage)]" aria-hidden>
@@ -132,8 +132,8 @@ function AcademyCourseCard({ course, large = false, mark = "leaf" }: CardProps) 
       </div>
 
       {course.features.length > 0 ? (
-        <ul className={`relative space-y-2 ${large ? "mt-7" : "mt-5"}`}>
-          {course.features.slice(0, large ? 6 : 4).map((feature) => (
+        <ul className={`relative space-y-2 ${large ? "mt-6" : "mt-5"}`}>
+          {course.features.slice(0, 3).map((feature) => (
             <li
               key={feature}
               className="flex items-start gap-2.5 text-sm text-[var(--academy-text)]/85"
@@ -164,7 +164,7 @@ function AcademyCourseCard({ course, large = false, mark = "leaf" }: CardProps) 
             href={detailHref}
             className="relative z-10 mt-2 inline-flex items-center gap-1 text-xs font-medium text-[var(--academy-sage)] transition-colors hover:text-[var(--academy-text)]"
           >
-            View syllabus
+            View details
             <ArrowRight className="h-3 w-3" aria-hidden />
           </Link>
         </div>
