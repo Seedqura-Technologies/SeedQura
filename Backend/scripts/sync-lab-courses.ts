@@ -1,15 +1,15 @@
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
 
-const KEEP = ["frameworks-lab", "signal-lab", "groundtruth-lab"] as const;
+const KEEP = ["frameworks-lab", "signal-lab", "groundtruth-lab", "research-fellowship"] as const;
 
 const LAB_COURSES = [
   {
     id: "frameworks-lab",
     name: "Frameworks Lab",
-    tagline: "See with code — ship vision projects",
+    tagline: "See with code. Ship vision projects.",
     description:
-      "Build end-to-end computer vision skills — from raw images and cleaning to classification, detection, and a GitHub portfolio employers can click and run.",
+      "Build end-to-end computer vision skills from raw images and cleaning to classification, detection, and a GitHub portfolio employers can click and run.",
     category: "Course",
     level: "Beginner–Intermediate",
     duration: "4 weeks",
@@ -31,9 +31,9 @@ const LAB_COURSES = [
   {
     id: "signal-lab",
     name: "Signal Lab",
-    tagline: "Business question → deployed model",
+    tagline: "From business question to deployed model.",
     description:
-      "Go from a real business problem to clean data, trained models, and a live prediction API — then package the full workflow as a GitHub portfolio recruiters can run.",
+      "Go from a real business problem to clean data, trained models, and a live prediction API, then package the full workflow as a GitHub portfolio recruiters can run.",
     category: "Course",
     level: "Beginner–Intermediate",
     duration: "4 weeks",
@@ -46,7 +46,7 @@ const LAB_COURSES = [
     display_status: "Open",
     featured: true,
     features: [
-      "Business → ML problem framing",
+      "Business to ML problem framing",
       "EDA, cleaning & feature craft",
       "Model training & evaluation",
       "FastAPI deploy + portfolio",
@@ -55,9 +55,9 @@ const LAB_COURSES = [
   {
     id: "groundtruth-lab",
     name: "Groundtruth Lab",
-    tagline: "Label data like a pro — ML-ready handoff",
+    tagline: "Label data like a pro. ML-ready handoff.",
     description:
-      "Design taxonomies, label real images, run quality checks, and ship documentation an ML engineer can import tomorrow — a GitHub portfolio that proves you belong in AI data ops.",
+      "Design taxonomies, label real images, run quality checks, and ship documentation an ML engineer can import tomorrow. A GitHub portfolio that proves you belong in AI data ops.",
     category: "Course",
     level: "Beginner",
     duration: "4 weeks",
@@ -74,6 +74,32 @@ const LAB_COURSES = [
       "Hands-on Label Studio labeling",
       "QA scripts & quality checks",
       "ML handoff docs + portfolio",
+    ],
+  },
+  {
+    id: "research-fellowship",
+    name: "Research Fellowship",
+    tagline: "3-month AI research. Real projects. Real portfolio.",
+    description:
+      "Work in a 6-person research group on one serious AI problem in healthcare, agriculture, computer vision, or GenAI, and leave with a research-grade project, GitHub, technical report, and publication-oriented manuscript.",
+    category: "Program",
+    level: "Intermediate–Advanced",
+    duration: "3 months",
+    format: "Live weekends · research groups of 6",
+    schedule_summary:
+      "3 months · 30 seats · 5 research groups · publication-oriented output",
+    price_inr: 19999,
+    currency: "INR",
+    price_display: "₹20,000 · incl. GST",
+    status: "published",
+    display_status: "Applications Open",
+    featured: true,
+    seat_limit: 30,
+    features: [
+      "5 research groups · 30 seats only",
+      "Healthcare · Agri · CV · GenAI tracks",
+      "GitHub + research report + demo day",
+      "Publication-oriented manuscript guidance",
     ],
   },
 ];

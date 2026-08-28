@@ -57,11 +57,13 @@ function SectionHeading({ children }: { children: ReactNode }) {
 }
 
 function EnrollSidebar({ course, detail }: { course: CatalogCourse; detail: LabCourseDetail }) {
+  const feeLabel = course.category === "Program" ? "Program fee" : "Course fee";
+
   return (
     <div className="academy-detail-sidebar space-y-5">
       <div className="academy-detail-sidebar-card p-6">
         <p className="text-[0.65rem] font-medium uppercase tracking-[0.18em] text-[var(--academy-text-muted)]">
-          Course fee
+          {feeLabel}
         </p>
         <p className="mt-2 text-3xl font-semibold tracking-tight text-[var(--academy-text)]">
           {course.priceDisplay}
@@ -223,6 +225,17 @@ export function AcademyCourseDetailView({ courseId, detail }: Props) {
               </div>
             </ScrollReveal>
 
+            {detail.premiumBlurb ? (
+              <ScrollReveal delay={0.09}>
+                <section>
+                  <SectionHeading>What makes this premium</SectionHeading>
+                  <p className="mt-4 text-sm leading-relaxed text-[var(--academy-text-muted)] md:text-base">
+                    {detail.premiumBlurb}
+                  </p>
+                </section>
+              </ScrollReveal>
+            ) : null}
+
             <ScrollReveal delay={0.08}>
               <section>
                 <SectionHeading>What you&apos;ll learn</SectionHeading>
@@ -262,36 +275,68 @@ export function AcademyCourseDetailView({ courseId, detail }: Props) {
               </section>
             </ScrollReveal>
 
-            <ScrollReveal delay={0.12}>
-              <section>
-                <SectionHeading>Course arc</SectionHeading>
-                <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  {detail.arc.map((row) => (
-                    <div key={row.week} className="academy-detail-week-card p-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--academy-sage)]">
-                        Week {row.week}
-                      </p>
-                      <p className="mt-2 text-sm leading-relaxed text-[var(--academy-text)]">
-                        {row.theme}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </ScrollReveal>
+            {detail.researchTracks && detail.researchTracks.length > 0 ? (
+              <ScrollReveal delay={0.11}>
+                <section>
+                  <SectionHeading>Research groups & projects</SectionHeading>
+                  <p className="mt-3 text-sm text-[var(--academy-text-muted)]">
+                    30 students · 5 groups · 6 per group · one core problem per group.
+                  </p>
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                    {detail.researchTracks.map((track) => (
+                      <div key={track.title} className="academy-detail-panel p-5">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--academy-sage)]">
+                          {track.title}
+                        </p>
+                        <ul className="mt-3 space-y-2 text-sm leading-relaxed text-[var(--academy-text)]/90">
+                          {track.items.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </ScrollReveal>
+            ) : null}
 
-            <ScrollReveal delay={0.14}>
-              <section>
-                <SectionHeading>Highlights</SectionHeading>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {detail.microcopy.map((line) => (
-                    <span key={line} className="academy-detail-chip">
-                      {line}
-                    </span>
+            {detail.programMonths && detail.programMonths.length > 0 ? (
+              <ScrollReveal delay={0.12}>
+                <section>
+                  <SectionHeading>Program journey</SectionHeading>
+                  <p className="mt-3 text-sm font-medium text-[var(--academy-text)]">
+                    Learn, practice, experiment, collaborate, build, demonstrate.
+                  </p>
+                  <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                    {detail.programMonths.map((row) => (
+                      <div key={row.label} className="academy-detail-week-card p-5">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--academy-sage)]">
+                          {row.label}
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed text-[var(--academy-text)]">
+                          {row.theme}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  {detail.liveTrainingLine ? (
+                    <p className="mt-4 text-sm leading-relaxed text-[var(--academy-text-muted)]">
+                      {detail.liveTrainingLine}
+                    </p>
+                  ) : null}
+                </section>
+              </ScrollReveal>
+            ) : null}
+
+            {detail.honestyLines && detail.honestyLines.length > 0 ? (
+              <ScrollReveal delay={0.13}>
+                <ul className="space-y-2 text-xs leading-relaxed text-[var(--academy-text-muted)]">
+                  {detail.honestyLines.map((line) => (
+                    <li key={line}>{line}</li>
                   ))}
-                </div>
-              </section>
-            </ScrollReveal>
+                </ul>
+              </ScrollReveal>
+            ) : null}
           </div>
 
           {/* Desktop sticky sidebar */}

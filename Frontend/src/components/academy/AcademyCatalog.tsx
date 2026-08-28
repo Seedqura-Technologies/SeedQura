@@ -184,7 +184,7 @@ function AcademyCourseCard({ course, large = false, mark = "leaf" }: CardProps) 
   );
 }
 
-const FEATURED_MARKS: Array<"leaf" | "branch" | "petal"> = ["leaf", "branch"];
+const FEATURED_MARKS: Array<"leaf" | "branch" | "petal"> = ["leaf", "branch", "petal", "leaf"];
 
 export function AcademyCatalog() {
   const courses = usePublishedCourses();

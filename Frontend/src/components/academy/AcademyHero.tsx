@@ -28,7 +28,7 @@ export function AcademyHero() {
             </h1>
 
             <p className="mt-6 max-w-lg text-lg font-medium leading-snug tracking-tight text-[var(--academy-text)] md:text-xl">
-              Intelligence is a craft — not a shortcut.
+              Intelligence is a craft. Not a shortcut.
             </p>
 
             <p className="mt-4 max-w-lg text-base leading-relaxed text-[var(--academy-text-muted)] md:text-lg">

@@ -97,6 +97,9 @@ export function EnrollClient({ courseId }: Props) {
 
   const qr = useMemo(() => qrForPrice(course?.price_inr), [course?.price_inr]);
 
+  const isFellowship = courseId === "research-fellowship";
+  const pageTitle = isFellowship ? "Apply for Selection" : "Enroll";
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -214,7 +217,7 @@ export function EnrollClient({ courseId }: Props) {
     return (
       <div className="mx-auto max-w-lg text-center">
         <h1 className="text-3xl font-medium tracking-tight text-text">
-          Enroll
+          {pageTitle}
         </h1>
         <p className="mt-6 text-error">{loadError}</p>
         <MagneticButton href="/academy" variant="secondary" className="mt-8">
@@ -228,7 +231,7 @@ export function EnrollClient({ courseId }: Props) {
     return (
       <div className="mx-auto max-w-lg text-center">
         <h1 className="text-3xl font-medium tracking-tight text-text">
-          Enroll
+          {pageTitle}
         </h1>
         <p className="mt-6 text-muted">Loading course…</p>
       </div>
@@ -321,7 +324,7 @@ export function EnrollClient({ courseId }: Props) {
   return (
     <div className="mx-auto max-w-lg">
       <h1 className="text-center text-3xl font-medium tracking-tight text-text">
-        Enroll
+        {pageTitle}
       </h1>
       <p className="mt-2 text-center text-sm text-muted">{course.name}</p>
       <p className="mt-1 text-center text-sm font-medium text-text">
@@ -331,8 +334,9 @@ export function EnrollClient({ courseId }: Props) {
       {step === "terms" && (
         <>
           <p className="mt-4 text-center text-sm leading-relaxed text-muted">
-            Review and accept our policies, then share your details and pay via
-            UPI. Access unlocks after we verify your UTR.
+            {isFellowship
+              ? "Review our policies, share your background, and pay the program fee via UPI. Selection review begins after we verify your UTR."
+              : "Review and accept our policies, then share your details and pay via UPI. Access unlocks after we verify your UTR."}
           </p>
           <div className="mt-8 space-y-5 rounded-2xl border border-white/8 bg-[var(--surface-1)] p-6">
             <LegalConsentCheckbox

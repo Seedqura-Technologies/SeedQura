@@ -44,6 +44,12 @@ export function mapToCatalogCourse(c: ApiCourse): CatalogCourse {
         ? Number(c.price)
         : null;
   const enrollable = price != null && price > 0;
+  const isProgram = c.category === "Program" || c.id === "research-fellowship";
+  const ctaLabel = enrollable
+    ? isProgram
+      ? "Apply for Selection"
+      : "Enroll Now"
+    : "Get In Touch";
   return {
     id: c.id,
     name: c.name,
@@ -59,7 +65,7 @@ export function mapToCatalogCourse(c: ApiCourse): CatalogCourse {
     features: Array.isArray(c.features) ? c.features : [],
     price_inr: price,
     cta: enrollable
-      ? { label: "Enroll Now", href: `/enroll/${c.id}` }
+      ? { label: ctaLabel, href: `/enroll/${c.id}` }
       : { label: "Get In Touch", href: "/#contact" },
   };
 }

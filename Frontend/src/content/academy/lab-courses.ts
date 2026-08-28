@@ -6,14 +6,18 @@ export type LabCourseDetail = {
   uspChips: string[];
   learnings: string[];
   deliverables: { label: string; title: string; description: string }[];
-  arc: { week: string; theme: string }[];
   tools: string;
   audience: string;
   prerequisites: string;
   trustLine: string;
   ecosystemLine?: string;
   ctaHeadline: string;
-  microcopy: string[];
+  /** Research Fellowship expand sections */
+  premiumBlurb?: string;
+  researchTracks?: { title: string; items: string[] }[];
+  programMonths?: { label: string; theme: string }[];
+  liveTrainingLine?: string;
+  honestyLines?: string[];
 };
 
 export const LAB_COURSE_DETAILS: Record<string, LabCourseDetail> = {
@@ -29,13 +33,13 @@ export const LAB_COURSE_DETAILS: Record<string, LabCourseDetail> = {
       "LinkedIn-ready demo day",
     ],
     learnings: [
-      "Where computer vision shows up in industry (retail, health, mobility, manufacturing) and how those products are built end-to-end",
+      "Where computer vision shows up in industry and how those products are built end to end",
       "How to load, inspect, and organize image datasets for a real CV pipeline",
-      "How to clean CV data: noise, outliers, normalization, balancing, train/val/test splits, light augmentation",
-      "Core CV tasks: classification, localization, detection, segmentation — and which to pick when",
-      "CNNs in practice (layers, ReLU, transfer learning) without drowning in math",
-      "Train, evaluate, and lightly customize a model; peek inside predictions with activation/saliency maps",
-      "How to package work as a public GitHub portfolio (README, demo GIF, structured folders, clear how-to-run)",
+      "Data cleaning for vision: noise, outliers, normalization, balancing, splits, light augmentation",
+      "Core CV tasks: classification, localization, detection, segmentation, and which to pick when",
+      "CNNs in practice without drowning in math",
+      "Train, evaluate, and customize a model; peek inside predictions with activation maps",
+      "Package work as a public GitHub portfolio recruiters can actually run",
     ],
     deliverables: [
       {
@@ -59,25 +63,13 @@ export const LAB_COURSE_DETAILS: Record<string, LabCourseDetail> = {
         description: "README, run instructions, demo GIF",
       },
     ],
-    arc: [
-      { week: "1", theme: "See the problem — CV landscape, images as data" },
-      { week: "2", theme: "Clean like a practitioner — prep, splits, augmentation" },
-      { week: "3", theme: "Algorithms that ship — classification + detection" },
-      { week: "4", theme: "Train, explain, ship — eval, interpretability, portfolio" },
-    ],
     tools: "Python · OpenCV · PyTorch · Jupyter · GitHub · Google Colab",
     audience:
-      "Students & early-career learners with Python basics who want visible GitHub proof.",
+      "Students and early-career learners with Python basics who want visible GitHub proof.",
     prerequisites: "Python basics · Jupyter or VS Code · No deep math required",
     trustLine:
-      "Aligned in spirit with NASSCOM Concepts of Computer Vision (SSC/N8139) — applied weekend sprint.",
+      "Aligned in spirit with NASSCOM Concepts of Computer Vision (SSC/N8139). An applied weekend sprint.",
     ctaHeadline: "Ready to ship vision projects?",
-    microcopy: [
-      "Commit #1 lands Week 1.",
-      "Your README is the interview.",
-      "Demo GIF > lecture slides.",
-      "One domain. Four weekends. Three repos.",
-    ],
   },
   "signal-lab": {
     id: "signal-lab",
@@ -86,20 +78,20 @@ export const LAB_COURSE_DETAILS: Record<string, LabCourseDetail> = {
     projectStory: "Student Success Predictor",
     uspChips: [
       "Every class ends in a commit",
-      "Metrics that matter (not vanity accuracy)",
+      "Metrics that matter, not vanity accuracy",
       "Live prediction API by the end",
       "LinkedIn-ready demo day",
     ],
     learnings: [
-      "How to turn a business question into a clear ML problem statement and success metrics",
+      "Turn a business question into a clear ML problem statement and success metrics",
       "Why data quality matters and how poor data breaks models downstream",
-      "How to collect and merge data from CSV, APIs, and open datasets",
-      "Exploratory data analysis with the right charts — and what to do with the insights",
+      "Collect and merge data from CSV, APIs, and open datasets",
+      "Exploratory analysis with the right charts and what to do with the insights",
       "Data cleaning, encoding, normalization, and stratified sampling",
       "Feature engineering basics that improve model signal",
-      "How to pick and train supervised models with scikit-learn",
-      "Train and evaluate with accuracy, precision, recall, ROC-AUC, confusion matrix",
-      "Model interpretability at a practical level (feature importance, SHAP/LIME peek)",
+      "Pick and train supervised models with scikit-learn",
+      "Evaluate with accuracy, precision, recall, ROC-AUC, and confusion matrix",
+      "Model interpretability at a practical level",
       "Deploy a model as a simple API and package the full workflow for GitHub",
     ],
     deliverables: [
@@ -124,25 +116,13 @@ export const LAB_COURSE_DETAILS: Record<string, LabCourseDetail> = {
         description: "README, metrics summary, demo GIF",
       },
     ],
-    arc: [
-      { week: "1", theme: "Frame the problem — business → ML spec, data intake" },
-      { week: "2", theme: "Understand and prepare — EDA, clean, encode, sample" },
-      { week: "3", theme: "Model and ship — features, train, evaluate" },
-      { week: "4", theme: "Explain and portfolio — interpret, deploy API, ship" },
-    ],
     tools: "Python · pandas · scikit-learn · FastAPI · GitHub · Google Colab",
     audience:
-      "Students & early-career learners with Python basics who want an end-to-end ML story on GitHub.",
+      "Students and early-career learners with Python basics who want an end-to-end ML story on GitHub.",
     prerequisites: "Python basics · Jupyter or VS Code · No deep math required",
     trustLine:
-      "Aligned in spirit with NASSCOM AI Machine Learning Analyst (SSC/Q8113) — applied weekend sprint.",
+      "Aligned in spirit with NASSCOM AI Machine Learning Analyst (SSC/Q8113). An applied weekend sprint.",
     ctaHeadline: "Ready to ship analyst-grade projects?",
-    microcopy: [
-      "Recall > vanity accuracy.",
-      "Your API is the demo.",
-      "Problem brief → model → deploy.",
-      "Commit every weekend. Portfolio by Week 4.",
-    ],
   },
   "groundtruth-lab": {
     id: "groundtruth-lab",
@@ -156,17 +136,17 @@ export const LAB_COURSE_DETAILS: Record<string, LabCourseDetail> = {
       "Docs ML teams actually use",
     ],
     learnings: [
-      "Why data annotation is the bottleneck in AI — and how labels drive model accuracy",
-      "Supervised vs unsupervised learning — and when annotation matters",
-      "Annotation types (boxes, polygons, tags, and more) — and which to use when",
-      "How to turn a project brief into a clear label taxonomy and guidelines",
-      "How to curate raw data: source, clean, organize, handle sensitive cases carefully",
-      "Hands-on labeling with industry-standard tools (Label Studio; CVAT overview)",
+      "Why data annotation is the bottleneck in AI and how labels drive model accuracy",
+      "Supervised vs unsupervised learning and when annotation matters",
+      "Annotation types and which to use when",
+      "Turn a project brief into a clear label taxonomy and guidelines",
+      "Curate raw data: source, clean, organize, handle sensitive cases carefully",
+      "Hands-on labeling with industry-standard tools",
       "Quality assurance: review workflows, class balance, spotting common label errors",
       "Validation basics and fixing bad labels before handoff",
-      "How to write annotation docs and an ML-ready handoff package",
-      "How AI-assisted tools speed labeling — and where human review still matters",
-      "How to package annotation work as a public GitHub portfolio",
+      "Write annotation docs and an ML-ready handoff package",
+      "Where AI-assisted tools speed labeling and where human review still matters",
+      "Package annotation work as a public GitHub portfolio",
     ],
     deliverables: [
       {
@@ -190,28 +170,137 @@ export const LAB_COURSE_DETAILS: Record<string, LabCourseDetail> = {
         description: "Guidelines, handoff report, demo GIF",
       },
     ],
-    arc: [
-      { week: "1", theme: "Understand the work — annotation landscape, taxonomy, tools" },
-      { week: "2", theme: "Curate and label — data prep + labeling sprint" },
-      { week: "3", theme: "Quality and validation — QA, balance, fix & re-export" },
-      { week: "4", theme: "Document and ship — guidelines, handoff, portfolio" },
-    ],
     tools: "Label Studio · CVAT (overview) · Python · COCO / YOLO · GitHub · Google Sheets",
     audience:
-      "Students & early-career learners entering AI data ops. No ML engineering background required.",
+      "Students and early-career learners entering AI data ops. No ML engineering background required.",
     prerequisites:
       "Basic computer literacy · spreadsheets & web tools · Python helpful later, not required to start",
     trustLine:
-      "Aligned in spirit with NASSCOM Data Annotator (SSC/Q8120) — applied weekend sprint.",
+      "Aligned in spirit with NASSCOM Data Annotator (SSC/Q8120). An applied weekend sprint.",
     ecosystemLine:
-      "Labels from this course can feed Frameworks Lab — data → detector pipeline.",
+      "Labels from this course can feed Frameworks Lab. Data flows into the detector pipeline.",
     ctaHeadline: "Ready to label like a pro?",
-    microcopy: [
-      "Tight boxes. Clean taxonomy. Happy ML engineers.",
-      "Your guidelines are the product.",
-      "No model without labels.",
-      "Commit every weekend. Portfolio by Week 4.",
+  },
+  "research-fellowship": {
+    id: "research-fellowship",
+    heroHeadline: "This is not a course with a certificate stapled on.",
+    heroSubline:
+      "3 months · 30 students · 5 research groups · one problem that looks like research, not homework.",
+    projectStory: "Research-grade portfolio",
+    uspChips: [
+      "Apply for Selection, not open enroll",
+      "6 students · 1 mentor-led research problem",
+      "End to end: data to model to eval to demo",
+      "Publication-oriented output",
     ],
+    premiumBlurb:
+      "Students work in small research groups on real-world, publication-oriented AI projects under structured mentorship: literature review, experiments, comparative analysis, documentation, and a final research demo. The goal is something substantial to show. A research-grade project, a GitHub portfolio, a technical report, and a publication-oriented manuscript. Not another PDF certificate.",
+    learnings: [
+      "Formulate a research problem and find the gap in existing work",
+      "Literature review and research methodology for AI projects",
+      "End-to-end AI workflow from data processing to model development, evaluation, and demo",
+      "Advanced skills across ML, deep learning, computer vision, and Generative AI by track",
+      "Experiment design, baselines, comparative analysis, and honest evaluation",
+      "Explainability where it matters for medical and agricultural vision",
+      "Research documentation, GitHub craft, and demo-day presentation",
+      "Structure a publication-oriented manuscript and prepare for submission guidance",
+    ],
+    deliverables: [
+      {
+        label: "Project",
+        title: "Major research-grade AI project",
+        description: "Your individual contribution inside a 6-person group",
+      },
+      {
+        label: "Code",
+        title: "Public GitHub repository",
+        description: "Reproducible experiments and clean project structure",
+      },
+      {
+        label: "Docs",
+        title: "Technical project report",
+        description: "Methodology, implementation, results",
+      },
+      {
+        label: "Research",
+        title: "Publication-oriented manuscript",
+        description: "Literature review, experimental design, comparative analysis",
+      },
+      {
+        label: "Demo",
+        title: "Final demonstration",
+        description: "Structured feedback on demo day",
+      },
+      {
+        label: "Credentials",
+        title: "Internship certificates",
+        description: "3-month internship + project completion on successful evaluation",
+      },
+    ],
+    researchTracks: [
+      {
+        title: "Healthcare AI",
+        items: [
+          "MedVision-AI: Explainable deep learning for medical image diagnosis",
+          "HealthRisk-AI: Multimodal AI for early healthcare risk prediction",
+        ],
+      },
+      {
+        title: "AI for Agriculture",
+        items: [
+          "AgriVision-AI: Crop disease detection and severity assessment",
+          "CropGuard-AI: Crop health and stress monitoring with computer vision",
+        ],
+      },
+      {
+        title: "Generative AI & LLM",
+        items: [
+          "RAGMed-AI: Domain RAG for healthcare with trustworthy GenAI",
+          "ResearchCopilot-AI: LLM research assistant for literature and summarization",
+        ],
+      },
+      {
+        title: "Also available as group tracks",
+        items: [
+          "Computer Vision: advanced vision research aligned with Frameworks Lab depth",
+          "Advanced AI / Research: stretch and cross-domain research problems",
+        ],
+      },
+    ],
+    programMonths: [
+      {
+        label: "Month 1",
+        theme:
+          "Research and foundation. Orientation, problem formulation, literature review, dataset, baseline, experimental protocol",
+      },
+      {
+        label: "Month 2",
+        theme:
+          "AI development. Advanced models, experiments, tuning, comparative analysis, explainability, group meetings",
+      },
+      {
+        label: "Month 3",
+        theme:
+          "Research and ship. Final experiments, analysis, manuscript prep, GitHub polish, Demo Day, evaluation, submission guidance",
+      },
+    ],
+    liveTrainingLine:
+      "48 hours of live weekend training across the program. Saturday and Sunday pulses reinforce concepts with immediate implementation inside your research group.",
+    tools:
+      "Python · PyTorch / TensorFlow · OpenCV · Jupyter · GitHub · Colab · domain stacks for medical/agri CV and RAG / LLM tooling",
+    audience:
+      "B.Tech / BCA / MCA / M.Tech students, undergraduate researchers, and anyone building a strong AI portfolio rather than collecting weekend certificates.",
+    prerequisites:
+      "Solid Python basics · comfort with ML fundamentals preferred · selection is application-based",
+    trustLine:
+      "Publication-oriented research and manuscript preparation with submission guidance.",
+    honestyLines: [
+      "We do not guarantee conference or journal acceptance.",
+      "Seats are limited. Placement into a research group follows selection.",
+    ],
+    ecosystemLine:
+      "Finished Frameworks Lab, Signal Lab, or Groundtruth Lab? Apply here as your research-grade next step.",
+    ctaHeadline: "Six minds. One problem. Research that shows.",
   },
 };
 
