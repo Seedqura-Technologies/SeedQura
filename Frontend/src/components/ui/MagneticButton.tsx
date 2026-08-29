@@ -2,6 +2,7 @@
 
 import { useRef, type ReactNode } from "react";
 import { motion, useMotionValue, useSpring } from "framer-motion";
+import { isExternalHref } from "@/lib/fellowship";
 
 type MagneticButtonProps = {
   children: ReactNode;
@@ -43,15 +44,24 @@ export function MagneticButton({
 
   const fullWidth = /\bw-full\b/.test(className);
   const base = `btn-premium ${variant === "primary" ? "btn-primary" : "btn-secondary"} disabled:cursor-not-allowed disabled:opacity-50 ${className}`;
+  const external = href ? isExternalHref(href) : false;
 
   const inner = href ? (
-    <a
-      href={href}
-      className={base}
-      {...(href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-    >
-      {children}
-    </a>
+    external ? (
+      <a
+        href={href}
+        className={base}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {children}
+        <span className="sr-only"> (opens in new tab)</span>
+      </a>
+    ) : (
+      <a href={href} className={base}>
+        {children}
+      </a>
+    )
   ) : (
     <button type={type} disabled={disabled} onClick={onClick} className={base}>
       {children}

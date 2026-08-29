@@ -33,10 +33,12 @@ export async function updateSession(request: NextRequest) {
   const user = session?.user ?? null;
 
   const path = request.nextUrl.pathname;
+  // Fellowship enroll page: Step 1 (apply) is public; payment still requires login at submit.
+  const isFellowshipEnroll = path === "/enroll/research-fellowship";
   const isProtected =
     path.startsWith("/dashboard") ||
     path.startsWith("/admin") ||
-    path.startsWith("/enroll");
+    (path.startsWith("/enroll") && !isFellowshipEnroll);
 
   if (!user && isProtected) {
     const redirectUrl = request.nextUrl.clone();

@@ -1,4 +1,4 @@
--- Research Fellowship program (₹19,999 / ₹20,000 display) + refresh lab copy without em-dash taglines.
+-- Research Fellowship program (₹19,999 incl. GST) + refresh lab copy without em-dash taglines.
 
 insert into public.courses (
   id, name, tagline, description, category, level, duration, format,

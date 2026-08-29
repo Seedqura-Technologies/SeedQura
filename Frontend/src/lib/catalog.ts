@@ -49,13 +49,13 @@ export function mapToCatalogCourse(c: ApiCourse): CatalogCourse {
         ? Number(c.price)
         : null;
   const enrollable = price != null && price > 0;
-  const isProgram = c.category === "Program" || isResearchFellowship(c.id);
-  const ctaLabel = enrollable
-    ? isProgram
-      ? "Apply for Selection"
-      : "Enroll Now"
-    : "Get In Touch";
-  const ctaHref = isResearchFellowship(c.id)
+  const fellowship = isResearchFellowship(c.id);
+  const ctaLabel = fellowship
+    ? "Apply for Selection"
+    : enrollable
+      ? "Enroll Now"
+      : "Get In Touch";
+  const ctaHref = fellowship
     ? RESEARCH_FELLOWSHIP_APPLY_URL
     : enrollable
       ? `/enroll/${c.id}`

@@ -102,9 +102,9 @@ function EnrollSidebar({ course, detail }: { course: CatalogCourse; detail: LabC
             {detail.ctaHeadline}{" "}
             <Link
               href={RESEARCH_FELLOWSHIP_PAY_PATH}
-              className="text-[var(--academy-sage)] hover:text-[var(--academy-text)]"
+              className="font-medium text-[var(--academy-sage)] hover:text-[var(--academy-text)]"
             >
-              Pay here after offer
+              Already selected? Complete your fee →
             </Link>
           </p>
         ) : (

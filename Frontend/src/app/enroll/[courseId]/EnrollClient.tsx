@@ -47,7 +47,8 @@ const YEARS = [
 /** Exact QR map — never fall back to a wrong amount-locked QR. */
 const QR_BY_PRICE: Record<number, { src: string; label: string }> = {
   4999: { src: "/payments/upi-4999.jpg", label: "₹4,999" },
-  19999: { src: "/payments/upi-19999.jpg", label: "₹19,999" },
+  // 19999: amount-locked QR must match exactly — current asset is the ₹20,000 QR.
+  // Use manual UPI entry until a verified ₹19,999 QR is added.
 };
 
 function qrForPrice(priceInr: number | null | undefined): {
@@ -92,6 +93,7 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
   const [pendingUtr, setPendingUtr] = useState<string | null>(null);
   const [pendingAt, setPendingAt] = useState<string | null>(null);
   const [allowResubmit, setAllowResubmit] = useState(false);
+  const [confirmedSelection, setConfirmedSelection] = useState(false);
 
   const upiId =
     process.env.NEXT_PUBLIC_UPI_ID?.trim() || "ansulsingh67890-1@oksbi";
@@ -99,7 +101,15 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
   const qr = useMemo(() => qrForPrice(course?.price_inr), [course?.price_inr]);
 
   const isFellowship = courseId === "research-fellowship";
-  const pageTitle = isFellowship ? "Apply for Selection" : "Enroll";
+  const pageTitle = paymentOnly
+    ? "Fellowship payment"
+    : isFellowship
+      ? "Apply for Selection"
+      : "Enroll";
+
+  const stepDetailsLabel = paymentOnly ? "Your details" : "Step 1 of 2 — Your details";
+  const stepPayLabel = paymentOnly ? "Pay via UPI" : "Step 2 of 2 — Pay via UPI";
+  const verifyHours = "24 hours";
 
   const priceLabel = useMemo(
     () =>
@@ -155,6 +165,10 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
 
   function goDetails() {
     setConsentError("");
+    if (paymentOnly && isFellowship && !confirmedSelection) {
+      setConsentError("Confirm you received a selection offer before continuing.");
+      return;
+    }
     if (!acceptedTerms) {
       setConsentError(
         "Please accept the terms and policies before continuing."
@@ -209,7 +223,7 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
       });
       setDoneMessage(
         res.message ||
-          "Submitted — we’ll verify your UTR and unlock access (usually within a few hours)."
+          `Submitted — we’ll verify your UTR and unlock access (usually within ${verifyHours}).`
       );
       setStep("done");
     } catch (err) {
@@ -224,35 +238,47 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
 
   if (loadError) {
     return (
-      <div className="mx-auto max-w-lg text-center">
-        <h1 className="text-3xl font-medium tracking-tight text-text">
-          {pageTitle}
-        </h1>
-        <p className="mt-6 text-error">{loadError}</p>
-        <MagneticButton href="/academy" variant="secondary" className="mt-8">
-          Back to Learnings
-        </MagneticButton>
+      <div className={paymentOnly ? "text-center" : "mx-auto max-w-lg text-center"}>
+        {!paymentOnly ? (
+          <h1 className="text-3xl font-medium tracking-tight text-text">
+            {pageTitle}
+          </h1>
+        ) : (
+          <p className="text-sm font-medium text-text">{pageTitle}</p>
+        )}
+        <p className={`text-error ${paymentOnly ? "mt-4" : "mt-6"}`}>{loadError}</p>
+        {!paymentOnly ? (
+          <MagneticButton href="/academy" variant="secondary" className="mt-8">
+            Back to Learnings
+          </MagneticButton>
+        ) : null}
       </div>
     );
   }
 
   if (!course) {
     return (
-      <div className="mx-auto max-w-lg text-center">
-        <h1 className="text-3xl font-medium tracking-tight text-text">
-          {pageTitle}
-        </h1>
-        <p className="mt-6 text-muted">Loading course…</p>
+      <div className={paymentOnly ? "text-center" : "mx-auto max-w-lg text-center"}>
+        {!paymentOnly ? (
+          <h1 className="text-3xl font-medium tracking-tight text-text">
+            {pageTitle}
+          </h1>
+        ) : (
+          <p className="text-sm text-muted">Loading payment…</p>
+        )}
+        {!paymentOnly ? (
+          <p className="mt-6 text-muted">Loading course…</p>
+        ) : null}
       </div>
     );
   }
 
   if (step === "already_pending") {
     return (
-      <div className="mx-auto max-w-lg text-center">
-        <h1 className="text-3xl font-medium tracking-tight text-text">
+      <div className={paymentOnly ? "text-center" : "mx-auto max-w-lg text-center"}>
+        <h2 className={paymentOnly ? "text-lg font-medium text-text" : "text-3xl font-medium tracking-tight text-text"}>
           Already submitted
-        </h1>
+        </h2>
         <p className="mt-6 text-sm leading-relaxed text-muted">
           We already have a UTR for <span className="text-text">{course.name}</span>
           {pendingUtr ? (
@@ -270,7 +296,7 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
           </p>
         )}
         <p className="mt-4 text-sm text-muted">
-          If it&apos;s not unlocked within 24 hours, email{" "}
+          If it&apos;s not unlocked within {verifyHours}, email{" "}
           <Link
             href="mailto:gethelp.seedqura@gmail.com"
             className="text-accent hover:text-text"
@@ -304,15 +330,15 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
 
   if (step === "done") {
     return (
-      <div className="mx-auto max-w-lg text-center">
-        <h1 className="text-3xl font-medium tracking-tight text-text">
+      <div className={paymentOnly ? "text-center" : "mx-auto max-w-lg text-center"}>
+        <h2 className={paymentOnly ? "text-lg font-medium text-text" : "text-3xl font-medium tracking-tight text-text"}>
           Payment submitted
-        </h1>
+        </h2>
         <p className="mt-6 text-sm leading-relaxed text-muted">{doneMessage}</p>
         <p className="mt-3 text-sm text-muted">
           You’ll see <span className="text-text">Pending verification</span> on
-          your dashboard until we approve. If it&apos;s not unlocked within 24
-          hours, email gethelp.seedqura@gmail.com — do not pay again.
+          your dashboard until we approve. If it&apos;s not unlocked within{" "}
+          {verifyHours}, email gethelp.seedqura@gmail.com — do not pay again.
         </p>
         <div className="mt-8 flex flex-col gap-3">
           <MagneticButton
@@ -322,9 +348,11 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
           >
             Go to dashboard
           </MagneticButton>
-          <MagneticButton href="/academy" variant="secondary" className="w-full">
-            Back to Learnings
-          </MagneticButton>
+          {!paymentOnly ? (
+            <MagneticButton href="/academy" variant="secondary" className="w-full">
+              Back to Learnings
+            </MagneticButton>
+          ) : null}
         </div>
       </div>
     );
@@ -355,12 +383,31 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
             className={`text-sm leading-relaxed text-muted ${paymentOnly ? "" : "mt-4 text-center"}`}
           >
             {isFellowship
-              ? "Confirm policies, share your details, and pay ₹19,999 incl. GST via UPI. Only complete this if you received a selection offer."
+              ? paymentOnly
+                ? `Confirm policies and pay ${priceLabel} via UPI. Only complete this if you received a selection offer.`
+                : "Confirm policies, share your details, and pay ₹19,999 incl. GST via UPI. Only complete this if you received a selection offer."
               : "Review and accept our policies, then share your details and pay via UPI. Access unlocks after we verify your UTR."}
           </p>
           <div
             className={`space-y-5 rounded-2xl border border-white/8 bg-[var(--surface-1)] p-6 ${paymentOnly ? "mt-4" : "mt-8"}`}
           >
+            {paymentOnly && isFellowship ? (
+              <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-muted">
+                <input
+                  type="checkbox"
+                  checked={confirmedSelection}
+                  onChange={(e) => {
+                    setConfirmedSelection(e.target.checked);
+                    if (e.target.checked) setConsentError("");
+                  }}
+                  className="mt-1 h-4 w-4 shrink-0 rounded border-white/20 bg-transparent accent-[var(--accent)]"
+                />
+                <span>
+                  I received a selection offer from Seedqura for the Research
+                  Fellowship and I am paying within the offer window.
+                </span>
+              </label>
+            ) : null}
             <LegalConsentCheckbox
               id="enroll-terms"
               variant="enroll"
@@ -394,7 +441,7 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
           onSubmit={goPay}
           className="mt-8 space-y-4 rounded-2xl border border-white/8 bg-[var(--surface-1)] p-6"
         >
-          <p className="text-sm text-muted">Step 1 of 2 — Your details</p>
+          <p className="text-sm text-muted">{stepDetailsLabel}</p>
           <label className="block text-sm">
             <span className="text-muted">Full name</span>
             <input
@@ -483,10 +530,11 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
           onSubmit={submitUtr}
           className="mt-8 space-y-5 rounded-2xl border border-white/8 bg-[var(--surface-1)] p-6"
         >
-          <p className="text-sm text-muted">Step 2 of 2 — Pay via UPI</p>
+          <p className="text-sm text-muted">{stepPayLabel}</p>
           <div>
             <p className="text-lg font-medium text-text">
               Pay exactly {formatInr(course.price_inr)}
+              {isFellowship ? " incl. GST" : ""}
             </p>
             <p className="mt-2 text-xs leading-relaxed text-muted">
               Until Seedqura Technologies LLP banking is ready, payments go to

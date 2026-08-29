@@ -11,6 +11,7 @@ import {
   sendMail,
 } from "../lib/mail.js";
 import { syncEnrollmentCalendar } from "../lib/enrollment-calendar-sync.js";
+import { fellowshipPaymentBlocked } from "../lib/fellowship-gate.js";
 
 export const paymentsRouter = Router();
 
@@ -204,6 +205,12 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
     const courseId = String(req.body?.courseId || "");
     if (!courseId) {
       res.status(400).json({ error: "courseId required" });
+      return;
+    }
+
+    const fellowshipGate = fellowshipPaymentBlocked(courseId, req.userEmail);
+    if (fellowshipGate.blocked) {
+      res.status(403).json({ error: fellowshipGate.message });
       return;
     }
 
@@ -630,6 +637,12 @@ paymentsRouter.post("/utr-submit", requireAuth, async (req: AuthedRequest, res) 
     }
     if (!/^[6-9]\d{9}$/.test(applicantPhone.replace(/\s/g, ""))) {
       res.status(400).json({ error: "Enter a valid 10-digit Indian mobile number" });
+      return;
+    }
+
+    const fellowshipGate = fellowshipPaymentBlocked(courseId, req.userEmail);
+    if (fellowshipGate.blocked) {
+      res.status(403).json({ error: fellowshipGate.message });
       return;
     }
 

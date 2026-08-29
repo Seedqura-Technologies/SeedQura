@@ -13,7 +13,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/research",
     "/academy",
     ...getLabCourseDetailIds().map((id) => `/academy/${id}`),
-    "/apply",
     "/privacy",
     "/terms",
     "/cookies",

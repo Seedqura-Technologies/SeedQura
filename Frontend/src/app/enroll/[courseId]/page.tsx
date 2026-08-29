@@ -10,7 +10,7 @@ export default async function EnrollPage({
   const { courseId } = await params;
 
   return (
-    <main className="flex min-h-screen items-center px-4 py-28">
+    <main className="flex min-h-screen items-start px-4 py-20 sm:items-center sm:py-28">
       {isResearchFellowship(courseId) ? (
         <FellowshipEnrollClient />
       ) : (
