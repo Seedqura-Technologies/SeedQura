@@ -1,4 +1,5 @@
 import { getCourses } from "@/lib/data";
+import { displayCoursePrice } from "@/lib/course-pricing";
 
 export type CatalogCourse = {
   id: string;
@@ -59,7 +60,7 @@ export function mapToCatalogCourse(c: ApiCourse): CatalogCourse {
     level: c.level || "",
     duration: c.duration || "",
     format: c.format || "",
-    priceDisplay: c.price_display || c.priceDisplay || "—",
+    priceDisplay: displayCoursePrice(price, c.price_display || c.priceDisplay),
     status: c.display_status || (typeof c.status === "string" ? c.status : "") || "",
     featured: !!c.featured,
     features: Array.isArray(c.features) ? c.features : [],

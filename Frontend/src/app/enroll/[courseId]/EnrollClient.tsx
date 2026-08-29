@@ -6,6 +6,7 @@ import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { LegalConsentCheckbox } from "@/components/legal/LegalConsentCheckbox";
+import { displayCoursePrice } from "@/lib/course-pricing";
 
 type Props = { courseId: string };
 
@@ -99,6 +100,14 @@ export function EnrollClient({ courseId }: Props) {
 
   const isFellowship = courseId === "research-fellowship";
   const pageTitle = isFellowship ? "Apply for Selection" : "Enroll";
+
+  const priceLabel = useMemo(
+    () =>
+      course
+        ? displayCoursePrice(course.price_inr, course.price_display)
+        : "—",
+    [course]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -327,15 +336,20 @@ export function EnrollClient({ courseId }: Props) {
         {pageTitle}
       </h1>
       <p className="mt-2 text-center text-sm text-muted">{course.name}</p>
+      {isFellowship ? (
+        <p className="mt-2 text-center text-sm leading-relaxed text-muted">
+          3-month program · Live weekends · 30 seats · 5 research groups of 6
+        </p>
+      ) : null}
       <p className="mt-1 text-center text-sm font-medium text-text">
-        {course.price_display || formatInr(course.price_inr)}
+        {priceLabel}
       </p>
 
       {step === "terms" && (
         <>
           <p className="mt-4 text-center text-sm leading-relaxed text-muted">
             {isFellowship
-              ? "Review our policies, share your background, and pay the program fee via UPI. Selection review begins after we verify your UTR."
+              ? "3-month Research Fellowship · program fee ₹19,999 incl. GST via UPI. Share your background, submit payment, and selection review begins after we verify your UTR."
               : "Review and accept our policies, then share your details and pay via UPI. Access unlocks after we verify your UTR."}
           </p>
           <div className="mt-8 space-y-5 rounded-2xl border border-white/8 bg-[var(--surface-1)] p-6">
