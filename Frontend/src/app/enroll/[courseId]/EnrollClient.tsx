@@ -8,7 +8,7 @@ import { MagneticButton } from "@/components/ui/MagneticButton";
 import { LegalConsentCheckbox } from "@/components/legal/LegalConsentCheckbox";
 import { displayCoursePrice } from "@/lib/course-pricing";
 
-type Props = { courseId: string };
+type Props = { courseId: string; paymentOnly?: boolean };
 
 type CourseInfo = {
   id: string;
@@ -73,7 +73,7 @@ function maskUtr(utr: string): string {
   return `${u.slice(0, 3)}••••${u.slice(-3)}`;
 }
 
-export function EnrollClient({ courseId }: Props) {
+export function EnrollClient({ courseId, paymentOnly = false }: Props) {
   const [step, setStep] = useState<Step>("terms");
   const [course, setCourse] = useState<CourseInfo | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -331,28 +331,36 @@ export function EnrollClient({ courseId }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-lg">
-      <h1 className="text-center text-3xl font-medium tracking-tight text-text">
-        {pageTitle}
-      </h1>
-      <p className="mt-2 text-center text-sm text-muted">{course.name}</p>
-      {isFellowship ? (
-        <p className="mt-2 text-center text-sm leading-relaxed text-muted">
-          3-month program · Live weekends · 30 seats · 5 research groups of 6
-        </p>
+    <div className={paymentOnly ? "" : "mx-auto max-w-lg"}>
+      {!paymentOnly ? (
+        <>
+          <h1 className="text-center text-3xl font-medium tracking-tight text-text">
+            {pageTitle}
+          </h1>
+          <p className="mt-2 text-center text-sm text-muted">{course.name}</p>
+          {isFellowship ? (
+            <p className="mt-2 text-center text-sm leading-relaxed text-muted">
+              3-month program · Live weekends · 30 seats · 5 research groups of 6
+            </p>
+          ) : null}
+          <p className="mt-1 text-center text-sm font-medium text-text">
+            {priceLabel}
+          </p>
+        </>
       ) : null}
-      <p className="mt-1 text-center text-sm font-medium text-text">
-        {priceLabel}
-      </p>
 
       {step === "terms" && (
         <>
-          <p className="mt-4 text-center text-sm leading-relaxed text-muted">
+          <p
+            className={`text-sm leading-relaxed text-muted ${paymentOnly ? "" : "mt-4 text-center"}`}
+          >
             {isFellowship
-              ? "3-month Research Fellowship · program fee ₹19,999 incl. GST via UPI. Share your background, submit payment, and selection review begins after we verify your UTR."
+              ? "Confirm policies, share your details, and pay ₹19,999 incl. GST via UPI. Only complete this if you received a selection offer."
               : "Review and accept our policies, then share your details and pay via UPI. Access unlocks after we verify your UTR."}
           </p>
-          <div className="mt-8 space-y-5 rounded-2xl border border-white/8 bg-[var(--surface-1)] p-6">
+          <div
+            className={`space-y-5 rounded-2xl border border-white/8 bg-[var(--surface-1)] p-6 ${paymentOnly ? "mt-4" : "mt-8"}`}
+          >
             <LegalConsentCheckbox
               id="enroll-terms"
               variant="enroll"
@@ -366,15 +374,17 @@ export function EnrollClient({ courseId }: Props) {
               className="w-full"
               onClick={goDetails}
             >
-              Continue
+              Continue to payment
             </MagneticButton>
-            <MagneticButton
-              href="/academy"
-              variant="secondary"
-              className="w-full"
-            >
-              Back to Learnings
-            </MagneticButton>
+            {!paymentOnly ? (
+              <MagneticButton
+                href="/academy"
+                variant="secondary"
+                className="w-full"
+              >
+                Back to Learnings
+              </MagneticButton>
+            ) : null}
           </div>
         </>
       )}

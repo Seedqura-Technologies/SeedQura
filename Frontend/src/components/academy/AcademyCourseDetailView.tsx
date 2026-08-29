@@ -18,6 +18,10 @@ import type { LabCourseDetail } from "@/content/academy/lab-courses";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { ScrollReveal } from "@/components/motion/ScrollReveal";
 import { BranchAccent, LeafSilhouette } from "@/components/academy/BotanicalMarks";
+import {
+  isResearchFellowship,
+  RESEARCH_FELLOWSHIP_PAY_PATH,
+} from "@/lib/fellowship";
 
 type Props = {
   courseId: string;
@@ -93,9 +97,21 @@ function EnrollSidebar({ course, detail }: { course: CatalogCourse; detail: LabC
             <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
           </MagneticButton>
         </div>
-        <p className="mt-4 text-center text-xs leading-relaxed text-[var(--academy-text-muted)]">
-          {detail.ctaHeadline}
-        </p>
+        {isResearchFellowship(course.id) ? (
+          <p className="mt-4 text-center text-xs leading-relaxed text-[var(--academy-text-muted)]">
+            {detail.ctaHeadline}{" "}
+            <Link
+              href={RESEARCH_FELLOWSHIP_PAY_PATH}
+              className="text-[var(--academy-sage)] hover:text-[var(--academy-text)]"
+            >
+              Pay here after offer
+            </Link>
+          </p>
+        ) : (
+          <p className="mt-4 text-center text-xs leading-relaxed text-[var(--academy-text-muted)]">
+            {detail.ctaHeadline}
+          </p>
+        )}
       </div>
 
       <div className="academy-detail-panel p-5">

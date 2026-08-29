@@ -1,5 +1,9 @@
 import { getCourses } from "@/lib/data";
 import { displayCoursePrice } from "@/lib/course-pricing";
+import {
+  isResearchFellowship,
+  RESEARCH_FELLOWSHIP_APPLY_URL,
+} from "@/lib/fellowship";
 
 export type CatalogCourse = {
   id: string;
@@ -45,12 +49,17 @@ export function mapToCatalogCourse(c: ApiCourse): CatalogCourse {
         ? Number(c.price)
         : null;
   const enrollable = price != null && price > 0;
-  const isProgram = c.category === "Program" || c.id === "research-fellowship";
+  const isProgram = c.category === "Program" || isResearchFellowship(c.id);
   const ctaLabel = enrollable
     ? isProgram
       ? "Apply for Selection"
       : "Enroll Now"
     : "Get In Touch";
+  const ctaHref = isResearchFellowship(c.id)
+    ? RESEARCH_FELLOWSHIP_APPLY_URL
+    : enrollable
+      ? `/enroll/${c.id}`
+      : "/#contact";
   return {
     id: c.id,
     name: c.name,
@@ -65,9 +74,7 @@ export function mapToCatalogCourse(c: ApiCourse): CatalogCourse {
     featured: !!c.featured,
     features: Array.isArray(c.features) ? c.features : [],
     price_inr: price,
-    cta: enrollable
-      ? { label: ctaLabel, href: `/enroll/${c.id}` }
-      : { label: "Get In Touch", href: "/#contact" },
+    cta: { label: ctaLabel, href: ctaHref },
   };
 }
 

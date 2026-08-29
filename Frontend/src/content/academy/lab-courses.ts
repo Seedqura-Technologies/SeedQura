@@ -185,7 +185,7 @@ export const LAB_COURSE_DETAILS: Record<string, LabCourseDetail> = {
       "Seats are limited. Group placement follows selection.",
     ],
     ecosystemLine: "Completed a Seedqura lab? Apply as your research next step.",
-    ctaHeadline: "Apply for selection.",
+    ctaHeadline: "Apply on the selection form. Pay only if accepted.",
   },
 };
 

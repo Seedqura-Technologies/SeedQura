@@ -45,7 +45,11 @@ export function MagneticButton({
   const base = `btn-premium ${variant === "primary" ? "btn-primary" : "btn-secondary"} disabled:cursor-not-allowed disabled:opacity-50 ${className}`;
 
   const inner = href ? (
-    <a href={href} className={base}>
+    <a
+      href={href}
+      className={base}
+      {...(href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+    >
       {children}
     </a>
   ) : (

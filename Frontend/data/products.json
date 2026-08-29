@@ -2,16 +2,16 @@
   "products": [
     {
       "id": "academy",
-      "name": "Seedqura Academy",
-      "status": "Now Enrolling",
-      "description": "A structured research mentorship program for students — guided projects in AI for agriculture and medicine, led by active researchers from leading institutions.",
+      "name": "Research Fellowship",
+      "status": "Applications Open",
+      "description": "3-month, selection-based research program — live weekends, mentor-led groups, publication-oriented output. ₹19,999 incl. GST.",
       "features": [
-        "Mentor-led research projects",
-        "Live foundational sessions",
-        "Publication-oriented outcomes",
-        "Certificate on completion"
+        "3 months · live weekends",
+        "5 research groups · 30 seats",
+        "GitHub + technical report + manuscript draft",
+        "Selection-based enrollment"
       ],
-      "cta": { "label": "Apply Now", "href": "/apply" },
+      "cta": { "label": "Apply for Selection", "href": "https://forms.gle/DnkQ8Km3GTPzqwjr6" },
       "image": "/images/products/academy.jpg",
       "featured": true
     },
