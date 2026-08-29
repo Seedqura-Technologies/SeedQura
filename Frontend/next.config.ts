@@ -33,6 +33,8 @@ const nextConfig: NextConfig = {
       ""
     );
     return [
+      // Wake Render before authenticated dashboard calls (free tier sleeps when idle)
+      { source: "/api/health", destination: `${api}/health` },
       { source: "/api/student/:path*", destination: `${api}/api/student/:path*` },
       { source: "/api/admin/:path*", destination: `${api}/api/admin/:path*` },
       {

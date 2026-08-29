@@ -105,7 +105,11 @@ export default function AdminEnrollmentsPage() {
     <AdminShell title="Enrollments">
       <p className="mb-4 text-sm text-muted">
         Match UTR in GPay / bank, then Approve to activate. Reject if payment
-        cannot be verified.
+        cannot be verified. For filtered CSV downloads, use{" "}
+        <a href="/admin/export" className="text-accent hover:underline">
+          Export
+        </a>
+        .
       </p>
 
       <div className="mb-6 flex flex-wrap gap-2">

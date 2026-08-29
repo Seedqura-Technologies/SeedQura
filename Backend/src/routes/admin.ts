@@ -23,6 +23,12 @@ import { rescheduleSessionSafely } from "../lib/session-reschedule.js";
 import { retrySessionCalendarSync } from "../lib/session-calendar-retry.js";
 import { loadScheduleDashboard } from "../lib/schedule-dashboard.js";
 import { registerAdminScheduleRoutes } from "./admin-schedules.js";
+import {
+  enrollmentsToCsv,
+  exportFilename,
+  filterEnrollmentsByDateRange,
+  toEnrollmentExportRow,
+} from "../lib/enrollment-export.js";
 
 export const adminRouter = Router();
 
@@ -292,6 +298,7 @@ adminRouter.get("/enrollments", async (req, res) => {
   try {
     const status = String(req.query.status || "").trim();
     const paymentStatus = String(req.query.payment_status || "awaiting_verification").trim();
+    const courseId = String(req.query.course_id || "").trim();
     const admin = getSupabaseAdmin();
     let query = admin
       .from("enrollments")
@@ -305,6 +312,7 @@ adminRouter.get("/enrollments", async (req, res) => {
       query = query.eq("payment_status", paymentStatus);
     }
     if (status) query = query.eq("status", status);
+    if (courseId) query = query.eq("course_id", courseId);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -312,6 +320,159 @@ adminRouter.get("/enrollments", async (req, res) => {
   } catch (err) {
     console.error("[admin/enrollments]", err);
     res.status(500).json({ error: "Failed to list enrollments" });
+  }
+});
+
+/**
+ * Export enrolled students as CSV (or JSON preview).
+ *
+ * Query:
+ * - course_id
+ * - status (enrollment status; default active when payment_status=paid)
+ * - payment_status (default paid — typically who has access)
+ * - date_from / date_to (YYYY-MM-DD) on enrolled_at or utr_submitted_at
+ * - date_field = created_at | utr_submitted_at
+ * - schedule_from / schedule_to — only courses that have sessions in that window
+ * - format = csv | json
+ */
+adminRouter.get("/enrollments/export", async (req, res) => {
+  try {
+    const courseId = String(req.query.course_id || "").trim();
+    const paymentStatus = String(req.query.payment_status || "paid").trim();
+    const status = String(req.query.status || "").trim();
+    const dateFrom = String(req.query.date_from || "").trim() || null;
+    const dateTo = String(req.query.date_to || "").trim() || null;
+    const dateFieldRaw = String(req.query.date_field || "created_at").trim();
+    const dateField =
+      dateFieldRaw === "utr_submitted_at" ? "utr_submitted_at" : "created_at";
+    const scheduleFrom = String(req.query.schedule_from || "").trim() || null;
+    const scheduleTo = String(req.query.schedule_to || "").trim() || null;
+    const format = String(req.query.format || "csv").trim().toLowerCase();
+
+    const admin = getSupabaseAdmin();
+
+    let courseIds: string[] | null = courseId ? [courseId] : null;
+
+    if (scheduleFrom || scheduleTo) {
+      let sessionsQuery = admin
+        .from("course_sessions")
+        .select("course_id, starts_at")
+        .neq("status", "cancelled");
+      if (scheduleFrom) {
+        sessionsQuery = sessionsQuery.gte(
+          "starts_at",
+          `${scheduleFrom}T00:00:00.000Z`
+        );
+      }
+      if (scheduleTo) {
+        sessionsQuery = sessionsQuery.lte(
+          "starts_at",
+          `${scheduleTo}T23:59:59.999Z`
+        );
+      }
+      const { data: sessions, error: sErr } = await sessionsQuery;
+      if (sErr) throw sErr;
+      const fromSchedule = [
+        ...new Set(
+          (sessions ?? [])
+            .map((s) => s.course_id)
+            .filter((id): id is string => Boolean(id))
+        ),
+      ];
+      if (courseIds) {
+        courseIds = courseIds.filter((id) => fromSchedule.includes(id));
+      } else {
+        courseIds = fromSchedule;
+      }
+      if (courseIds.length === 0) {
+        if (format === "json") {
+          res.json({ count: 0, rows: [], filename: exportFilename({}) });
+          return;
+        }
+        const empty = enrollmentsToCsv([]);
+        res.setHeader("Content-Type", "text/csv; charset=utf-8");
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${exportFilename({
+            courseId,
+            dateFrom,
+            dateTo,
+            scheduleFrom,
+            scheduleTo,
+          })}"`
+        );
+        res.send(empty);
+        return;
+      }
+    }
+
+    let query = admin
+      .from("enrollments")
+      .select(
+        "id, user_id, course_id, status, payment_status, progress_pct, created_at, utr, institution, degree, year_of_study, applicant_phone, applicant_name, utr_submitted_at, course:courses(id, name), profile:profiles(id, full_name, email)"
+      )
+      .order("created_at", { ascending: false });
+
+    if (paymentStatus && paymentStatus !== "all") {
+      query = query.eq("payment_status", paymentStatus);
+    }
+    if (status && status !== "all") {
+      query = query.eq("status", status);
+    } else if (paymentStatus === "paid" && !status) {
+      // Paid exports usually mean activated students
+      query = query.eq("status", "active");
+    }
+    if (courseIds && courseIds.length === 1) {
+      query = query.eq("course_id", courseIds[0]);
+    } else if (courseIds && courseIds.length > 1) {
+      query = query.in("course_id", courseIds);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    let rows = data ?? [];
+    rows = filterEnrollmentsByDateRange(rows, {
+      dateFrom,
+      dateTo,
+      dateField,
+    });
+
+    const filename = exportFilename({
+      courseId: courseId || (courseIds?.length === 1 ? courseIds[0] : null),
+      dateFrom,
+      dateTo,
+      scheduleFrom,
+      scheduleTo,
+    });
+
+    if (format === "json") {
+      res.json({
+        count: rows.length,
+        filename,
+        filters: {
+          courseId: courseId || null,
+          courseIds,
+          paymentStatus,
+          status: status || (paymentStatus === "paid" ? "active" : null),
+          dateFrom,
+          dateTo,
+          dateField,
+          scheduleFrom,
+          scheduleTo,
+        },
+        rows: rows.map(toEnrollmentExportRow),
+      });
+      return;
+    }
+
+    const csv = enrollmentsToCsv(rows);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(csv);
+  } catch (err) {
+    console.error("[admin/enrollments/export]", err);
+    res.status(500).json({ error: "Failed to export enrollments" });
   }
 });
 

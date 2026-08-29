@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { createHash } from "node:crypto";
 import { getSupabaseAdmin } from "../lib/supabase.js";
 
 export type AuthedRequest = Request & {
@@ -31,8 +32,8 @@ function bearer(req: Request): string | null {
 }
 
 function cacheKey(token: string): string {
-  // Token prefix is enough as a cache key for the short TTL window
-  return token.length > 48 ? token.slice(0, 48) : token;
+  // Must hash the full JWT — prefix alone is the shared header and collides across users.
+  return createHash("sha256").update(token).digest("hex");
 }
 
 function getCached(token: string): AuthCacheEntry | null {

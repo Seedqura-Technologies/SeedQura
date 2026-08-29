@@ -1,11 +1,11 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { clearTokenCache } from "@/lib/api";
+import { clearTokenCache, warmApi } from "@/lib/api";
 import { Logo } from "@/components/ui/Logo";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 
@@ -42,6 +42,12 @@ export function LoginForm() {
   );
   const [loading, setLoading] = useState(false);
 
+  // Start waking the Render API while the user is on the login screen
+  // (free tier sleeps after idle — first request can take 30–60s).
+  useEffect(() => {
+    void warmApi();
+  }, []);
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
@@ -61,19 +67,25 @@ export function LoginForm() {
       // Prefer user from sign-in (skip extra getUser round trip)
       const user = signedIn.user;
       let dest = next;
-      if (user && next === "/dashboard") {
-        const metaRole = user.user_metadata?.role;
-        if (metaRole === "admin") {
-          dest = "/admin";
-        } else {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", user.id)
-            .maybeSingle();
-          if (profile?.role === "admin") dest = "/admin";
-        }
-      }
+
+      // Role lookup + API wake in parallel so dashboard is ready after redirect
+      const [, profileResult] = await Promise.all([
+        warmApi(),
+        user && next === "/dashboard"
+          ? (async () => {
+              const metaRole = user.user_metadata?.role;
+              if (metaRole === "admin") return { role: "admin" as const };
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("role")
+                .eq("id", user.id)
+                .maybeSingle();
+              return profile;
+            })()
+          : Promise.resolve(null),
+      ]);
+
+      if (profileResult?.role === "admin") dest = "/admin";
 
       // Hard navigation avoids an extra middleware getUser from router.refresh()
       window.location.assign(dest);

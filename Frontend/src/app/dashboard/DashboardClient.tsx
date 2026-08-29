@@ -80,27 +80,46 @@ export function StudentDashboard() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [slow, setSlow] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    const slowTimer = window.setTimeout(() => {
+      if (!cancelled) setSlow(true);
+    }, 4000);
+
     (async () => {
       try {
+        setLoading(true);
+        setError("");
+        setSlow(false);
         // Home/purchased only need /student/me — load courses when opening Products
         const meData = await apiFetch("/student/me");
         if (cancelled) return;
         setMe(meData);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load");
+          const msg = err instanceof Error ? err.message : "Failed to load";
+          const aborted =
+            err instanceof Error &&
+            (err.name === "AbortError" || /abort/i.test(msg));
+          setError(
+            aborted
+              ? "The server is waking up. Please try again in a moment."
+              : msg
+          );
         }
       } finally {
+        window.clearTimeout(slowTimer);
         if (!cancelled) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
+      window.clearTimeout(slowTimer);
     };
-  }, []);
+  }, [reloadKey]);
 
   useEffect(() => {
     if (tab !== "products" || courses.length > 0) return;
@@ -168,7 +187,15 @@ export function StudentDashboard() {
   if (loading) {
     return (
       <DashboardShell title="Dashboard" tab={tab}>
-        <p className="dashboard-loading">Loading…</p>
+        <div className="dashboard-loading space-y-2">
+          <p>{slow ? "Waking up the server…" : "Loading…"}</p>
+          {slow ? (
+            <p className="text-sm text-muted">
+              First load after idle can take up to a minute. Refresh usually works
+              once the API is online.
+            </p>
+          ) : null}
+        </div>
       </DashboardShell>
     );
   }
@@ -176,7 +203,16 @@ export function StudentDashboard() {
   if (error || !me) {
     return (
       <DashboardShell title="Dashboard" tab={tab}>
-        <p className="text-error">{error || "Unable to load dashboard"}</p>
+        <div className="space-y-4">
+          <p className="text-error">{error || "Unable to load dashboard"}</p>
+          <MagneticButton
+            type="button"
+            variant="secondary"
+            onClick={() => setReloadKey((n) => n + 1)}
+          >
+            Try again
+          </MagneticButton>
+        </div>
       </DashboardShell>
     );
   }
