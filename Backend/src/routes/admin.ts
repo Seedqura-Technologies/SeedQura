@@ -23,6 +23,7 @@ import { rescheduleSessionSafely } from "../lib/session-reschedule.js";
 import { retrySessionCalendarSync } from "../lib/session-calendar-retry.js";
 import { loadScheduleDashboard } from "../lib/schedule-dashboard.js";
 import { registerAdminScheduleRoutes } from "./admin-schedules.js";
+import { registerAdminFellowshipRoutes } from "./admin-fellowship.js";
 import {
   enrollmentsToCsv,
   exportFilename,
@@ -34,6 +35,7 @@ export const adminRouter = Router();
 
 adminRouter.use(requireAuth, requireAdmin);
 registerAdminScheduleRoutes(adminRouter);
+registerAdminFellowshipRoutes(adminRouter);
 
 type StatsCache = {
   payload: {

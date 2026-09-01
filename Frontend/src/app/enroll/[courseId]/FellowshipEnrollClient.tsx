@@ -9,7 +9,7 @@ import { displayCoursePrice } from "@/lib/course-pricing";
 import {
   RESEARCH_FELLOWSHIP_APPLY_URL,
   RESEARCH_FELLOWSHIP_ID,
-  RESEARCH_FELLOWSHIP_PAY_PATH,
+  RESEARCH_FELLOWSHIP_PAY_ANCHOR,
 } from "@/lib/fellowship";
 import { EnrollClient } from "./EnrollClient";
 
@@ -31,6 +31,12 @@ export function FellowshipEnrollClient() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || window.location.hash !== "#pay") return;
+    const el = document.getElementById("pay");
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [signedIn]);
 
   return (
     <div className="mx-auto w-full max-w-lg space-y-10">
@@ -86,7 +92,7 @@ export function FellowshipEnrollClient() {
         ) : (
           <div className="space-y-3">
             <MagneticButton
-              href={`/login?next=${encodeURIComponent(RESEARCH_FELLOWSHIP_PAY_PATH)}#pay`}
+              href={`/login?next=${encodeURIComponent(RESEARCH_FELLOWSHIP_PAY_ANCHOR)}`}
               variant="primary"
               className="w-full !min-h-11"
             >
@@ -94,8 +100,8 @@ export function FellowshipEnrollClient() {
               <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
             </MagneticButton>
             <p className="text-center text-xs leading-relaxed text-muted">
-              Use the same email you applied with. Payment unlocks only for
-              selected candidates.
+              Use the same email you received your selection offer on. Payment
+              unlocks only for selected candidates.
             </p>
           </div>
         )}

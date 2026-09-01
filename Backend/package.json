@@ -18,11 +18,13 @@
     "db:migrate:session-reschedule": "tsx scripts/migrate-session-reschedule.ts",
     "db:migrate:enrollment-calendar-sync": "tsx scripts/migrate-enrollment-calendar-sync.ts",
     "db:migrate:utr-enroll": "tsx scripts/migrate-utr-enroll.ts",
+    "db:migrate:fellowship-selections": "tsx scripts/migrate-fellowship-selections.ts",
     "db:migrate:session-calendar-sync-retry": "tsx scripts/migrate-session-calendar-sync-retry.ts",
     "db:migrate:session-student-read-policy": "tsx scripts/migrate-session-student-read-policy.ts",
-    "test": "tsx --test src/lib/schedule-generator.test.ts src/lib/course-students.test.ts src/lib/schedule-email.test.ts src/lib/google-calendar.test.ts src/lib/ics.test.ts src/lib/student-course-calendar.test.ts src/lib/session-edit.test.ts src/lib/session-cancel.test.ts src/lib/session-reschedule.test.ts src/lib/enrollment-calendar-sync.test.ts src/lib/session-calendar-retry.test.ts src/lib/schedule-dashboard.test.ts src/lib/notifications.test.ts src/lib/enrollment-export.test.ts",
+    "test": "tsx --test src/lib/schedule-generator.test.ts src/lib/course-students.test.ts src/lib/schedule-email.test.ts src/lib/google-calendar.test.ts src/lib/ics.test.ts src/lib/student-course-calendar.test.ts src/lib/session-edit.test.ts src/lib/session-cancel.test.ts src/lib/session-reschedule.test.ts src/lib/enrollment-calendar-sync.test.ts src/lib/session-calendar-retry.test.ts src/lib/schedule-dashboard.test.ts src/lib/notifications.test.ts src/lib/enrollment-export.test.ts src/lib/fellowship-gate.test.ts",
     "test:e2e": "node --experimental-test-module-mocks --import tsx --test src/lib/schedule-e2e-scenario.test.ts",
     "test:e2e:platform": "tsx scripts/e2e-platform.ts",
+    "test:e2e:fellowship": "tsx scripts/e2e-fellowship.ts",
     "test:all": "npm test && npm run test:e2e && npm run test:e2e:platform"
   },
   "dependencies": {

@@ -20,7 +20,7 @@ import { ScrollReveal } from "@/components/motion/ScrollReveal";
 import { BranchAccent, LeafSilhouette } from "@/components/academy/BotanicalMarks";
 import {
   isResearchFellowship,
-  RESEARCH_FELLOWSHIP_PAY_PATH,
+  RESEARCH_FELLOWSHIP_PAY_ANCHOR,
 } from "@/lib/fellowship";
 
 type Props = {
@@ -101,7 +101,7 @@ function EnrollSidebar({ course, detail }: { course: CatalogCourse; detail: LabC
           <p className="mt-4 text-center text-xs leading-relaxed text-[var(--academy-text-muted)]">
             {detail.ctaHeadline}{" "}
             <Link
-              href={RESEARCH_FELLOWSHIP_PAY_PATH}
+              href={RESEARCH_FELLOWSHIP_PAY_ANCHOR}
               className="font-medium text-[var(--academy-sage)] hover:text-[var(--academy-text)]"
             >
               Already selected? Complete your fee →

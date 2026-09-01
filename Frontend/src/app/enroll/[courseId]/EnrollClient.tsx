@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { LegalConsentCheckbox } from "@/components/legal/LegalConsentCheckbox";
 import { displayCoursePrice } from "@/lib/course-pricing";
+import { RESEARCH_FELLOWSHIP_APPLY_URL } from "@/lib/fellowship";
 
 type Props = { courseId: string; paymentOnly?: boolean };
 
@@ -47,8 +48,7 @@ const YEARS = [
 /** Exact QR map — never fall back to a wrong amount-locked QR. */
 const QR_BY_PRICE: Record<number, { src: string; label: string }> = {
   4999: { src: "/payments/upi-4999.jpg", label: "₹4,999" },
-  // 19999: amount-locked QR must match exactly — current asset is the ₹20,000 QR.
-  // Use manual UPI entry until a verified ₹19,999 QR is added.
+  19999: { src: "/payments/upi-19999.jpg", label: "₹19,999 · incl. GST" },
 };
 
 function qrForPrice(priceInr: number | null | undefined): {
@@ -94,6 +94,11 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
   const [pendingAt, setPendingAt] = useState<string | null>(null);
   const [allowResubmit, setAllowResubmit] = useState(false);
   const [confirmedSelection, setConfirmedSelection] = useState(false);
+  const [fellowshipEligible, setFellowshipEligible] = useState<boolean | null>(
+    null
+  );
+  const [fellowshipBlockMessage, setFellowshipBlockMessage] = useState("");
+  const [signedInEmail, setSignedInEmail] = useState("");
 
   const upiId =
     process.env.NEXT_PUBLIC_UPI_ID?.trim() || "ansulsingh67890-1@oksbi";
@@ -150,6 +155,31 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
           setPendingAt(existing.utr_submitted_at || null);
           setStep("already_pending");
         }
+
+        if (paymentOnly && courseId === "research-fellowship") {
+          if (!meRes) {
+            setFellowshipEligible(false);
+            setFellowshipBlockMessage(
+              "Sign in with the email you received your selection offer on."
+            );
+            return;
+          }
+          const elig = await apiFetch(
+            `/payments/fellowship-eligibility?courseId=${encodeURIComponent(courseId)}`
+          );
+          if (cancelled) return;
+          setFellowshipEligible(elig.eligible === true);
+          setFellowshipBlockMessage(
+            typeof elig.message === "string" ? elig.message : ""
+          );
+          setSignedInEmail(
+            typeof elig.email === "string"
+              ? elig.email
+              : profile?.email || ""
+          );
+        } else {
+          setFellowshipEligible(true);
+        }
       } catch (err) {
         if (!cancelled) {
           setLoadError(
@@ -161,7 +191,7 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [courseId, allowResubmit]);
+  }, [courseId, allowResubmit, paymentOnly]);
 
   function goDetails() {
     setConsentError("");
@@ -269,6 +299,54 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
         {!paymentOnly ? (
           <p className="mt-6 text-muted">Loading course…</p>
         ) : null}
+      </div>
+    );
+  }
+
+  if (
+    paymentOnly &&
+    isFellowship &&
+    fellowshipEligible === null &&
+    step !== "already_pending"
+  ) {
+    return (
+      <div className="text-center">
+        <p className="text-sm text-muted">Checking selection status…</p>
+      </div>
+    );
+  }
+
+  if (paymentOnly && isFellowship && fellowshipEligible === false) {
+    return (
+      <div className="space-y-4 text-center">
+        <p className="text-sm font-medium text-text">Payment not available yet</p>
+        <p className="text-sm leading-relaxed text-muted">
+          {fellowshipBlockMessage ||
+            "Fellowship payment opens only after selection."}
+        </p>
+        {signedInEmail ? (
+          <p className="text-xs leading-relaxed text-muted">
+            Signed in as{" "}
+            <span className="font-medium text-text">{signedInEmail}</span>. Use
+            the same email you received your selection offer on — it may differ
+            from your Google Form application email.
+          </p>
+        ) : null}
+        <div className="flex flex-col gap-3 pt-2">
+          <MagneticButton
+            href={RESEARCH_FELLOWSHIP_APPLY_URL}
+            variant="secondary"
+            className="w-full"
+          >
+            Apply for Selection
+          </MagneticButton>
+          <Link
+            href="mailto:gethelp.seedqura@gmail.com"
+            className="text-sm text-accent hover:text-text"
+          >
+            gethelp.seedqura@gmail.com
+          </Link>
+        </div>
       </div>
     );
   }

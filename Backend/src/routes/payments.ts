@@ -200,6 +200,37 @@ async function activateEnrollment(opts: {
 const COURSE_ORDER_FIELDS =
   "id, name, status, price_inr, price_display, currency, registration_deadline";
 
+/** Pre-check fellowship payment gate before the student fills the UTR form. */
+paymentsRouter.get(
+  "/fellowship-eligibility",
+  requireAuth,
+  async (req: AuthedRequest, res) => {
+    try {
+      const courseId = String(req.query.courseId || "");
+      if (!courseId) {
+        res.status(400).json({ error: "courseId required" });
+        return;
+      }
+      const gate = await fellowshipPaymentBlocked(courseId, req.userEmail);
+      if (gate.blocked) {
+        res.json({
+          eligible: false,
+          message: gate.message,
+          email: req.userEmail ?? null,
+        });
+        return;
+      }
+      res.json({
+        eligible: true,
+        email: req.userEmail ?? null,
+      });
+    } catch (err) {
+      console.error("[payments/fellowship-eligibility]", err);
+      res.status(500).json({ error: "Failed to check eligibility" });
+    }
+  }
+);
+
 paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
   try {
     const courseId = String(req.body?.courseId || "");
@@ -208,7 +239,7 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
       return;
     }
 
-    const fellowshipGate = fellowshipPaymentBlocked(courseId, req.userEmail);
+    const fellowshipGate = await fellowshipPaymentBlocked(courseId, req.userEmail);
     if (fellowshipGate.blocked) {
       res.status(403).json({ error: fellowshipGate.message });
       return;
@@ -640,7 +671,7 @@ paymentsRouter.post("/utr-submit", requireAuth, async (req: AuthedRequest, res) 
       return;
     }
 
-    const fellowshipGate = fellowshipPaymentBlocked(courseId, req.userEmail);
+    const fellowshipGate = await fellowshipPaymentBlocked(courseId, req.userEmail);
     if (fellowshipGate.blocked) {
       res.status(403).json({ error: fellowshipGate.message });
       return;

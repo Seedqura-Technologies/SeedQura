@@ -8,6 +8,9 @@ export const RESEARCH_FELLOWSHIP_APPLY_URL =
 
 export const RESEARCH_FELLOWSHIP_PAY_PATH = `/enroll/${RESEARCH_FELLOWSHIP_ID}`;
 
+/** Pay section anchor — use in login `next` and deep links. */
+export const RESEARCH_FELLOWSHIP_PAY_ANCHOR = `${RESEARCH_FELLOWSHIP_PAY_PATH}#pay`;
+
 export function isResearchFellowship(courseId: string) {
   return courseId === RESEARCH_FELLOWSHIP_ID;
 }
