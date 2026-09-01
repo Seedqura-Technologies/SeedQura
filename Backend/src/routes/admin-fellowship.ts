@@ -9,10 +9,9 @@ import {
   listActiveFellowshipSelections,
   normalizeFellowshipEmail,
   revokeFellowshipSelection,
-  markFellowshipSelectionEmailSent,
 } from "../lib/fellowship-selections.js";
 import { invalidateFellowshipAllowListCache } from "../lib/fellowship-gate.js";
-import { fellowshipSelectionEmail, sendMail } from "../lib/mail.js";
+import { sendFellowshipOfferEmail } from "../lib/fellowship-offer-mail.js";
 
 export function registerAdminFellowshipRoutes(adminRouter: Router): void {
   adminRouter.get("/fellowship-selections", async (_req, res) => {
@@ -70,23 +69,24 @@ export function registerAdminFellowshipRoutes(adminRouter: Router): void {
       });
       invalidateFellowshipAllowListCache();
 
+      let emailResult: Awaited<ReturnType<typeof sendFellowshipOfferEmail>> | null =
+        null;
       if (sendEmail) {
-        const mail = fellowshipSelectionEmail({
-          name: row.full_name || email,
-          payUrl: `${process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || process.env.FRONTEND_URL?.replace(/\/$/, "") || "https://www.seedqura.com"}/enroll/research-fellowship#pay`,
+        emailResult = await sendFellowshipOfferEmail({
+          email: row.email,
+          name: row.full_name,
         });
-        const sent = await sendMail({
-          to: row.email,
-          subject: mail.subject,
-          html: mail.html,
-        });
-        if (sent.ok) {
-          await markFellowshipSelectionEmailSent(row.email);
+        if (emailResult.status === "sent") {
           row.selection_email_sent_at = new Date().toISOString();
+        } else {
+          console.error("[admin/fellowship-selections POST] offer email", emailResult);
         }
       }
 
-      res.status(201).json({ selection: row });
+      res.status(201).json({
+        selection: row,
+        email: emailResult,
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to add selection";
       console.error("[admin/fellowship-selections POST]", err);
@@ -100,6 +100,59 @@ export function registerAdminFellowshipRoutes(adminRouter: Router): void {
       res.status(message === "Invalid email" ? 400 : 500).json({ error: message });
     }
   });
+
+  adminRouter.post(
+    "/fellowship-selections/:email/resend-email",
+    async (req: AuthedRequest, res) => {
+      try {
+        const email = decodeURIComponent(String(req.params.email || ""));
+        if (!email.trim()) {
+          res.status(400).json({ error: "email required" });
+          return;
+        }
+
+        const normalized = normalizeFellowshipEmail(email);
+        const active = await listActiveFellowshipSelections();
+        const row = active.find((r) => r.email === normalized);
+        if (!row) {
+          res.status(404).json({
+            error: "Candidate is not on the active fellowship allow-list.",
+          });
+          return;
+        }
+
+        const emailResult = await sendFellowshipOfferEmail({
+          email: row.email,
+          name: row.full_name,
+        });
+
+        if (emailResult.status !== "sent") {
+          console.error("[admin/fellowship-selections resend]", emailResult);
+          res.status(502).json({
+            error: emailResult.message,
+            email: emailResult,
+          });
+          return;
+        }
+
+        res.json({
+          ok: true,
+          email: emailResult,
+          selection_email_sent_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.error("[admin/fellowship-selections resend]", err);
+        if (isFellowshipSchemaError(err)) {
+          res.status(503).json({
+            error: fellowshipSchemaSetupMessage(),
+            code: "FELLOWSHIP_SCHEMA_MISSING",
+          });
+          return;
+        }
+        res.status(500).json({ error: "Failed to resend offer email" });
+      }
+    }
+  );
 
   adminRouter.delete(
     "/fellowship-selections/:email",

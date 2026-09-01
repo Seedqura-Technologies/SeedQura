@@ -21,8 +21,10 @@ export default function AdminFellowshipPage() {
   const [notes, setNotes] = useState("");
   const [sendEmail, setSendEmail] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [revoking, setRevoking] = useState<string | null>(null);
+  const [resending, setResending] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const data = await apiFetch("/admin/fellowship-selections");
@@ -40,9 +42,10 @@ export default function AdminFellowshipPage() {
   async function onAdd(e: FormEvent) {
     e.preventDefault();
     setError("");
+    setNotice("");
     setBusy(true);
     try {
-      await apiFetch("/admin/fellowship-selections", {
+      const data = await apiFetch("/admin/fellowship-selections", {
         method: "POST",
         body: JSON.stringify({
           email: email.trim(),
@@ -55,10 +58,39 @@ export default function AdminFellowshipPage() {
       setFullName("");
       setNotes("");
       await load();
+
+      if (sendEmail && data.email?.status === "sent") {
+        setNotice(`Added and offer email sent to ${data.selection?.email || email}.`);
+      } else if (sendEmail && data.email?.status !== "sent") {
+        setError(
+          data.email?.message ||
+            "Candidate added, but the offer email could not be sent. Use Resend email in the table."
+        );
+      } else {
+        setNotice("Candidate added to the allow-list.");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add selection");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function onResendEmail(targetEmail: string) {
+    setResending(targetEmail);
+    setError("");
+    setNotice("");
+    try {
+      await apiFetch(
+        `/admin/fellowship-selections/${encodeURIComponent(targetEmail)}/resend-email`,
+        { method: "POST" }
+      );
+      setNotice(`Offer email sent to ${targetEmail}.`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resend email");
+    } finally {
+      setResending(null);
     }
   }
 
@@ -142,6 +174,9 @@ export default function AdminFellowshipPage() {
             </span>
           </label>
           {error ? <p className="text-sm text-error">{error}</p> : null}
+          {notice ? (
+            <p className="text-sm text-accent">{notice}</p>
+          ) : null}
           <button
             type="submit"
             disabled={busy}
@@ -182,19 +217,33 @@ export default function AdminFellowshipPage() {
                       {new Date(row.selected_at).toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-muted">
-                      {row.selection_email_sent_at
-                        ? new Date(row.selection_email_sent_at).toLocaleString()
-                        : "Not sent"}
+                      {row.selection_email_sent_at ? (
+                        new Date(row.selection_email_sent_at).toLocaleString()
+                      ) : (
+                        <span className="text-amber-300">Not sent</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        disabled={revoking === row.email}
-                        onClick={() => onRevoke(row.email)}
-                        className="text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
-                      >
-                        {revoking === row.email ? "Revoking…" : "Revoke"}
-                      </button>
+                      <div className="flex flex-col items-end gap-1 sm:flex-row sm:justify-end sm:gap-3">
+                        {!row.selection_email_sent_at ? (
+                          <button
+                            type="button"
+                            disabled={resending === row.email}
+                            onClick={() => onResendEmail(row.email)}
+                            className="text-sm text-accent hover:text-text disabled:opacity-50"
+                          >
+                            {resending === row.email ? "Sending…" : "Resend email"}
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          disabled={revoking === row.email}
+                          onClick={() => onRevoke(row.email)}
+                          className="text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
+                        >
+                          {revoking === row.email ? "Revoking…" : "Revoke"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
