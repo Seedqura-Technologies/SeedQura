@@ -18,6 +18,26 @@ export function normalizeFellowshipEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+export function isFellowshipSchemaError(error: unknown): boolean {
+  const code =
+    error && typeof error === "object" && "code" in error
+      ? String((error as { code?: string }).code)
+      : "";
+  const message =
+    error && typeof error === "object" && "message" in error
+      ? String((error as { message?: string }).message)
+      : String(error ?? "");
+  return (
+    code === "PGRST205" ||
+    /fellowship_selections/i.test(message) ||
+    /schema cache/i.test(message)
+  );
+}
+
+export function fellowshipSchemaSetupMessage(): string {
+  return "Fellowship database table is not ready. Run Backend/supabase/migrations/20260901_fellowship_selections.sql in the Supabase SQL Editor, then retry.";
+}
+
 export async function listActiveFellowshipSelections(): Promise<
   FellowshipSelectionRow[]
 > {

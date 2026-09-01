@@ -4,6 +4,8 @@ import {
   addFellowshipSelection,
   countActiveFellowshipSelections,
   FELLOWSHIP_SEAT_CAP,
+  fellowshipSchemaSetupMessage,
+  isFellowshipSchemaError,
   listActiveFellowshipSelections,
   normalizeFellowshipEmail,
   revokeFellowshipSelection,
@@ -15,17 +17,21 @@ import { fellowshipSelectionEmail, sendMail } from "../lib/mail.js";
 export function registerAdminFellowshipRoutes(adminRouter: Router): void {
   adminRouter.get("/fellowship-selections", async (_req, res) => {
     try {
-      const [selections, seatCount] = await Promise.all([
-        listActiveFellowshipSelections(),
-        countActiveFellowshipSelections(),
-      ]);
+      const selections = await listActiveFellowshipSelections();
       res.json({
         selections,
-        seatCount,
+        seatCount: selections.length,
         seatCap: FELLOWSHIP_SEAT_CAP,
       });
     } catch (err) {
       console.error("[admin/fellowship-selections GET]", err);
+      if (isFellowshipSchemaError(err)) {
+        res.status(503).json({
+          error: fellowshipSchemaSetupMessage(),
+          code: "FELLOWSHIP_SCHEMA_MISSING",
+        });
+        return;
+      }
       res.status(500).json({ error: "Failed to load fellowship selections" });
     }
   });
@@ -84,6 +90,13 @@ export function registerAdminFellowshipRoutes(adminRouter: Router): void {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to add selection";
       console.error("[admin/fellowship-selections POST]", err);
+      if (isFellowshipSchemaError(err)) {
+        res.status(503).json({
+          error: fellowshipSchemaSetupMessage(),
+          code: "FELLOWSHIP_SCHEMA_MISSING",
+        });
+        return;
+      }
       res.status(message === "Invalid email" ? 400 : 500).json({ error: message });
     }
   });
@@ -102,6 +115,13 @@ export function registerAdminFellowshipRoutes(adminRouter: Router): void {
         res.json({ ok: true });
       } catch (err) {
         console.error("[admin/fellowship-selections DELETE]", err);
+        if (isFellowshipSchemaError(err)) {
+          res.status(503).json({
+            error: fellowshipSchemaSetupMessage(),
+            code: "FELLOWSHIP_SCHEMA_MISSING",
+          });
+          return;
+        }
         res.status(500).json({ error: "Failed to revoke selection" });
       }
     }

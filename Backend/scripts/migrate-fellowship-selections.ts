@@ -8,26 +8,27 @@ import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import dns from "node:dns/promises";
 import pg from "pg";
+import { createClient } from "@supabase/supabase-js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-async function pgClient(): Promise<pg.Client> {
+async function buildPgClients(): Promise<pg.Client[]> {
+  const clients: pg.Client[] = [];
+
   if (process.env.DATABASE_URL) {
-    return new pg.Client({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL.includes("localhost")
-        ? undefined
-        : { rejectUnauthorized: false },
-    });
+    clients.push(
+      new pg.Client({
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DATABASE_URL.includes("localhost")
+          ? undefined
+          : { rejectUnauthorized: false },
+      })
+    );
   }
 
   const password = process.env.SUPABASE_DB_PASSWORD;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!password || !url) {
-    throw new Error(
-      "Set DATABASE_URL or NEXT_PUBLIC_SUPABASE_URL + SUPABASE_DB_PASSWORD"
-    );
-  }
+  if (!password || !url) return clients;
 
   const ref = new URL(url).hostname.split(".")[0];
   const host = `db.${ref}.supabase.co`;
@@ -40,18 +41,89 @@ async function pgClient(): Promise<pg.Client> {
       const lookedUp = await dns.lookup(host);
       resolvedHost = lookedUp.address;
     } catch {
-      // Use hostname as last resort.
+      // hostname fallback below
     }
   }
 
-  return new pg.Client({
-    host: resolvedHost,
-    port: 5432,
-    user: "postgres",
-    password,
-    database: "postgres",
-    ssl: { rejectUnauthorized: false },
+  clients.push(
+    new pg.Client({
+      host: resolvedHost,
+      port: 5432,
+      user: "postgres",
+      password,
+      database: "postgres",
+      ssl: { rejectUnauthorized: false },
+    })
+  );
+
+  for (const region of [
+    "ap-south-1",
+    "ap-southeast-1",
+    "us-east-1",
+    "eu-west-1",
+  ]) {
+    clients.push(
+      new pg.Client({
+        host: `aws-0-${region}.pooler.supabase.com`,
+        port: 5432,
+        user: `postgres.${ref}`,
+        password,
+        database: "postgres",
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 12_000,
+      })
+    );
+  }
+
+  return clients;
+}
+
+async function connectPg(): Promise<pg.Client> {
+  const clients = await buildPgClients();
+  if (clients.length === 0) {
+    throw new Error(
+      "Set DATABASE_URL or NEXT_PUBLIC_SUPABASE_URL + SUPABASE_DB_PASSWORD"
+    );
+  }
+
+  const errors: string[] = [];
+  for (const client of clients) {
+    try {
+      await client.connect();
+      await client.query("select 1");
+      return client;
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : String(err));
+      try {
+        await client.end();
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  throw new Error(
+    `Could not connect to Postgres (${errors.length} attempts). Run the SQL file in Supabase SQL Editor instead.`
+  );
+}
+
+async function verifyPostgrest(): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    console.warn("[migrate-fellowship-selections] skip PostgREST verify (no service key)");
+    return;
+  }
+
+  const admin = createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
   });
+  const { error } = await admin.from("fellowship_selections").select("email").limit(1);
+  if (error) {
+    throw new Error(
+      `Table exists in Postgres but PostgREST still cannot read it: ${error.message}. Wait 30s and retry, or run NOTIFY pgrst, 'reload schema'; in SQL Editor.`
+    );
+  }
 }
 
 async function main() {
@@ -63,9 +135,8 @@ async function main() {
     "20260901_fellowship_selections.sql"
   );
   const sql = readFileSync(sqlPath, "utf8");
-  const client = await pgClient();
-  console.log("[migrate-fellowship-selections] connecting…");
-  await client.connect();
+  const client = await connectPg();
+  console.log("[migrate-fellowship-selections] connected");
   console.log("[migrate-fellowship-selections] applying…");
   await client.query(sql);
 
@@ -75,12 +146,14 @@ async function main() {
       where table_schema = 'public' and table_name = 'fellowship_selections'
     ) as table_exists
   `);
-  console.log("[migrate-fellowship-selections] verify", verify.rows[0]);
+  console.log("[migrate-fellowship-selections] postgres verify", verify.rows[0]);
   if (!verify.rows[0]?.table_exists) {
-    throw new Error("fellowship_selections table missing");
+    throw new Error("fellowship_selections table missing after migration");
   }
 
   await client.end();
+  await verifyPostgrest();
+  console.log("[migrate-fellowship-selections] PostgREST verify ok");
   console.log("[migrate-fellowship-selections] done");
 }
 

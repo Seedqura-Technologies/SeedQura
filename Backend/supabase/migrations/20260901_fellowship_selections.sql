@@ -1,4 +1,4 @@
--- Fellowship payment allow-list (replaces manual FELLOWSHIP_SELECTED_EMAILS env edits).
+-- Fellowship payment allow-list (admin-managed via /admin/fellowship).
 
 create table if not exists public.fellowship_selections (
   email text primary key,
@@ -15,3 +15,10 @@ create index if not exists fellowship_selections_active_idx
   where revoked_at is null;
 
 alter table public.fellowship_selections enable row level security;
+
+-- Expose table to PostgREST (service_role is used by the backend API).
+grant usage on schema public to postgres, anon, authenticated, service_role;
+grant select, insert, update, delete on table public.fellowship_selections to service_role;
+grant select, insert, update, delete on table public.fellowship_selections to postgres;
+
+notify pgrst, 'reload schema';
