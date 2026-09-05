@@ -100,9 +100,6 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
   const [fellowshipBlockMessage, setFellowshipBlockMessage] = useState("");
   const [signedInEmail, setSignedInEmail] = useState("");
 
-  const upiId =
-    process.env.NEXT_PUBLIC_UPI_ID?.trim() || "ansulsingh67890-1@oksbi";
-
   const qr = useMemo(() => qrForPrice(course?.price_inr), [course?.price_inr]);
 
   const isFellowship = courseId === "research-fellowship";
@@ -615,10 +612,8 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
               {isFellowship ? " incl. GST" : ""}
             </p>
             <p className="mt-2 text-xs leading-relaxed text-muted">
-              Until Seedqura Technologies LLP banking is ready, payments go to
-              the founder&apos;s UPI. You&apos;ll see{" "}
-              <span className="text-text">Ansul</span> (founder, Seedqura
-              Technologies LLP) as the recipient.
+              Scan the QR with any UPI app, pay the exact amount, then paste your
+              UTR below for verification.
             </p>
           </div>
 
@@ -635,18 +630,16 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
             </div>
           ) : (
             <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-              QR isn&apos;t available for this amount. Open any UPI app and pay{" "}
-              <span className="font-medium text-text">
-                exactly {formatInr(course.price_inr)}
-              </span>{" "}
-              to the UPI ID below, then paste your UTR.
+              QR isn&apos;t available for this amount. Email{" "}
+              <Link
+                href="mailto:gethelp.seedqura@gmail.com"
+                className="font-medium text-text underline"
+              >
+                gethelp.seedqura@gmail.com
+              </Link>{" "}
+              for payment help.
             </p>
           )}
-
-          <p className="text-center text-sm text-muted">
-            UPI ID:{" "}
-            <span className="select-all font-medium text-text">{upiId}</span>
-          </p>
 
           <label className="block text-sm">
             <span className="text-muted">UTR / UPI transaction ID</span>
