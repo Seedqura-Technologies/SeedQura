@@ -61,6 +61,7 @@ function SectionHeading({ children }: { children: ReactNode }) {
 
 function EnrollSidebar({ course, detail }: { course: CatalogCourse; detail: LabCourseDetail }) {
   const feeLabel = course.category === "Program" ? "Program fee" : "Course fee";
+  const fellowship = isResearchFellowship(course.id);
 
   return (
     <div className="academy-detail-sidebar space-y-5">
@@ -71,6 +72,17 @@ function EnrollSidebar({ course, detail }: { course: CatalogCourse; detail: LabC
         <p className="mt-2 text-3xl font-semibold tracking-tight text-[var(--academy-text)]">
           {course.priceDisplay}
         </p>
+        {course.priceSecondary ? (
+          <p className="mt-1.5 text-sm leading-snug text-[var(--academy-text-muted)]">
+            {course.priceSecondary}
+          </p>
+        ) : null}
+        {fellowship ? (
+          <p className="mt-3 text-xs leading-relaxed text-[var(--academy-sage)]/90">
+            Monthly installment after selection — or one full payment. Apply
+            free either way.
+          </p>
+        ) : null}
         <ul className="mt-5 space-y-3 text-sm text-[var(--academy-text-muted)]">
           {course.duration ? (
             <li className="flex items-center gap-2.5">
@@ -97,7 +109,7 @@ function EnrollSidebar({ course, detail }: { course: CatalogCourse; detail: LabC
             <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
           </MagneticButton>
         </div>
-        {isResearchFellowship(course.id) ? (
+        {fellowship ? (
           <p className="mt-4 text-center text-xs leading-relaxed text-[var(--academy-text-muted)]">
             {detail.ctaHeadline}{" "}
             <Link

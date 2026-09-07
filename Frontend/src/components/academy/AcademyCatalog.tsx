@@ -160,6 +160,16 @@ function AcademyCourseCard({ course, large = false, mark = "leaf" }: CardProps) 
           >
             {course.priceDisplay}
           </p>
+          {course.priceSecondary ? (
+            <p className="mt-1 text-xs leading-snug text-[var(--academy-text-muted)]">
+              {course.priceSecondary}
+            </p>
+          ) : null}
+          {course.priceNote ? (
+            <p className="mt-1.5 text-[0.7rem] leading-snug text-[var(--academy-sage)]/90">
+              {course.priceNote}
+            </p>
+          ) : null}
           <Link
             href={detailHref}
             className="relative z-10 mt-2 inline-flex items-center gap-1 text-xs font-medium text-[var(--academy-sage)] transition-colors hover:text-[var(--academy-text)]"

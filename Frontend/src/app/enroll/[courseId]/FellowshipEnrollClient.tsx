@@ -16,6 +16,7 @@ import { EnrollClient } from "./EnrollClient";
 export function FellowshipEnrollClient() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const priceLabel = displayCoursePrice(19999, "₹19,999 · incl. GST");
+  const monthlyLabel = displayCoursePrice(6999, "₹6,999 / month");
 
   useEffect(() => {
     let cancelled = false;
@@ -46,7 +47,7 @@ export function FellowshipEnrollClient() {
         </h1>
         <p className="mt-2 text-sm text-muted">3 months · Live weekends · 30 seats</p>
         <p className="mt-1 text-sm font-medium text-text">
-          {priceLabel} · payable only upon selection
+          {priceLabel} · or {monthlyLabel} · payable only upon selection
         </p>
       </div>
 
@@ -81,8 +82,8 @@ export function FellowshipEnrollClient() {
         </p>
         <p className="text-sm leading-relaxed text-muted">
           Received a selection offer? Sign in with the email we selected you
-          on, then complete the program fee within 72 hours. We verify your UTR
-          and unlock fellowship access.
+          on, then complete payment within 72 hours — full fee or monthly
+          installment. We verify your UTR and unlock fellowship access.
         </p>
 
         {signedIn === null ? (

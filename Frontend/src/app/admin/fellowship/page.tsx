@@ -169,8 +169,8 @@ export default function AdminFellowshipPage() {
               className="mt-1 h-4 w-4 accent-[var(--accent)]"
             />
             <span>
-              Email payment link to candidate (₹19,999 · sign in with this
-              email)
+              Email payment link to candidate (₹6,999/mo or ₹19,999 · sign in
+              with this email)
             </span>
           </label>
           {error ? <p className="text-sm text-error">{error}</p> : null}

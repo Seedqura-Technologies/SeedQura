@@ -416,13 +416,13 @@ export function fellowshipSelectionEmail(opts: {
     subject: "Research Fellowship — you're selected · complete your fee",
     html: emailLayout({
       preheader:
-        "Congratulations — complete your Research Fellowship fee within 72 hours.",
+        "You're selected — pay ₹6,999/mo or ₹19,999 full within 72 hours.",
       eyebrow: "Research Fellowship",
       title: "You're selected",
       bodyHtml: `
         <p style="margin:0 0 14px;">Hi ${safeName},</p>
         <p style="margin:0 0 14px;">Congratulations — you&apos;ve been selected for the <strong>Seedqura Research Fellowship</strong> (3 months · live weekends).</p>
-        <p style="margin:0 0 14px;">Complete your program fee of <strong>₹19,999 incl. GST</strong> within <strong>72 hours</strong>. Sign in with <strong>this email address</strong> before paying.</p>
+        <p style="margin:0 0 14px;">Complete payment within <strong>72 hours</strong>. Choose <strong>₹6,999/mo</strong> (monthly installment) or <strong>₹19,999 full · incl. GST</strong>. Sign in with <strong>this email address</strong> before paying.</p>
         <p style="margin:0;">After we verify your UTR, your fellowship access unlocks on your dashboard.</p>
       `,
       cta: { label: "Complete your fee", href: payUrl },

@@ -123,7 +123,7 @@ Source: `Frontend/data/courses.json`. If unsure, re-read that file.
 
 | Field | Value |
 |---|---|
-| Price | ₹19,999 · incl. GST |
+| Price | **Lead:** ₹6,999/mo · **Also:** ₹19,999 full · incl. GST (pay only if selected) |
 | Duration | 3 months |
 | Format | Live weekends · research groups of 6 |
 | Level | Intermediate–Advanced |
@@ -226,13 +226,18 @@ Before delivering final copy, self-score:
 | Course | URL |
 |---|---|
 | Academy catalog | https://www.seedqura.com/academy |
-| Frameworks Lab | https://www.seedqura.com/academy/frameworks-lab |
-| Signal Lab | https://www.seedqura.com/academy/signal-lab |
-| Groundtruth Lab | https://www.seedqura.com/academy/groundtruth-lab |
-| Research Fellowship | https://www.seedqura.com/academy/research-fellowship |
+| Frameworks Lab (detail) | https://www.seedqura.com/academy/frameworks-lab |
+| Signal Lab (detail) | https://www.seedqura.com/academy/signal-lab |
+| Groundtruth Lab (detail) | https://www.seedqura.com/academy/groundtruth-lab |
+| Research Fellowship (detail) | https://www.seedqura.com/academy/research-fellowship |
+| Enroll Frameworks | https://www.seedqura.com/enroll/frameworks-lab |
+| Enroll Signal | https://www.seedqura.com/enroll/signal-lab |
+| Enroll Groundtruth | https://www.seedqura.com/enroll/groundtruth-lab |
 | Apply (Research Fellowship) | https://forms.gle/DnkQ8Km3GTPzqwjr6 |
 | Pay (Research Fellowship, selected only) | https://www.seedqura.com/enroll/research-fellowship#pay |
 | LinkedIn (company) | From site.json — update if empty |
+
+**Marketing automation:** [`SPEND-PLAYBOOK.md`](SPEND-PLAYBOOK.md) (₹2k) · [`CALENDAR.md`](CALENDAR.md) · skills `seedqura-blitz`, `seedqura-linkedin`, `seedqura-x`
 
 ---
 

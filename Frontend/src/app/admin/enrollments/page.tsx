@@ -25,6 +25,10 @@ type Enrollment = {
     currency: string;
     razorpay_payment_id: string | null;
     created_at: string;
+    raw?: {
+      paymentPlan?: string;
+      amountInr?: number;
+    } | null;
   }[];
 };
 
@@ -163,6 +167,11 @@ export default function AdminEnrollmentsPage() {
                       <div>{e.course?.name}</div>
                       <div className="text-xs text-muted">
                         Expected: {formatAmount(pay?.amount, pay?.currency)}
+                        {pay?.raw?.paymentPlan === "monthly"
+                          ? " · monthly"
+                          : pay?.raw?.paymentPlan === "full"
+                            ? " · full"
+                            : ""}
                       </div>
                     </td>
                     <td className="px-4 py-3">

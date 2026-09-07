@@ -7,7 +7,13 @@ import { apiFetch } from "@/lib/api";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { LegalConsentCheckbox } from "@/components/legal/LegalConsentCheckbox";
 import { displayCoursePrice } from "@/lib/course-pricing";
-import { RESEARCH_FELLOWSHIP_APPLY_URL } from "@/lib/fellowship";
+import {
+  RESEARCH_FELLOWSHIP_APPLY_URL,
+  RESEARCH_FELLOWSHIP_FULL_INR,
+  RESEARCH_FELLOWSHIP_MONTHLY_INR,
+  fellowshipAmountForPlan,
+  type ResearchFellowshipPaymentPlan,
+} from "@/lib/fellowship";
 
 type Props = { courseId: string; paymentOnly?: boolean };
 
@@ -48,6 +54,7 @@ const YEARS = [
 /** Exact QR map — never fall back to a wrong amount-locked QR. */
 const QR_BY_PRICE: Record<number, { src: string; label: string }> = {
   4999: { src: "/payments/upi-4999.jpg", label: "₹4,999" },
+  6999: { src: "/payments/upi-6999.jpg", label: "₹6,999 / month" },
   19999: { src: "/payments/upi-19999.jpg", label: "₹19,999 · incl. GST" },
 };
 
@@ -99,10 +106,18 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
   );
   const [fellowshipBlockMessage, setFellowshipBlockMessage] = useState("");
   const [signedInEmail, setSignedInEmail] = useState("");
-
-  const qr = useMemo(() => qrForPrice(course?.price_inr), [course?.price_inr]);
+  /** Soft default: monthly installment so ₹19,999 is not the only path. */
+  const [fellowshipPlan, setFellowshipPlan] =
+    useState<ResearchFellowshipPaymentPlan>("monthly");
 
   const isFellowship = courseId === "research-fellowship";
+  const payAmountInr = useMemo(() => {
+    if (isFellowship) return fellowshipAmountForPlan(fellowshipPlan);
+    return course?.price_inr ?? null;
+  }, [isFellowship, fellowshipPlan, course?.price_inr]);
+
+  const qr = useMemo(() => qrForPrice(payAmountInr), [payAmountInr]);
+
   const pageTitle = paymentOnly
     ? "Fellowship payment"
     : isFellowship
@@ -113,13 +128,14 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
   const stepPayLabel = paymentOnly ? "Pay via UPI" : "Step 2 of 2 — Pay via UPI";
   const verifyHours = "24 hours";
 
-  const priceLabel = useMemo(
-    () =>
-      course
-        ? displayCoursePrice(course.price_inr, course.price_display)
-        : "—",
-    [course]
-  );
+  const priceLabel = useMemo(() => {
+    if (isFellowship) {
+      return displayCoursePrice(payAmountInr, null);
+    }
+    return course
+      ? displayCoursePrice(course.price_inr, course.price_display)
+      : "—";
+  }, [course, isFellowship, payAmountInr]);
 
   useEffect(() => {
     let cancelled = false;
@@ -236,17 +252,21 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
     setError("");
     setLoading(true);
     try {
+      const body: Record<string, unknown> = {
+        courseId,
+        utr: utr.trim(),
+        fullName: fullName.trim(),
+        phone: phone.replace(/\s/g, ""),
+        institution: institution.trim(),
+        degree,
+        yearOfStudy,
+      };
+      if (isFellowship && payAmountInr != null) {
+        body.amountInr = payAmountInr;
+      }
       const res = await apiFetch("/payments/utr-submit", {
         method: "POST",
-        body: JSON.stringify({
-          courseId,
-          utr: utr.trim(),
-          fullName: fullName.trim(),
-          phone: phone.replace(/\s/g, ""),
-          institution: institution.trim(),
-          degree,
-          yearOfStudy,
-        }),
+        body: JSON.stringify(body),
       });
       setDoneMessage(
         res.message ||
@@ -447,7 +467,9 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
             </p>
           ) : null}
           <p className="mt-1 text-center text-sm font-medium text-text">
-            {priceLabel}
+            {isFellowship
+              ? `${displayCoursePrice(RESEARCH_FELLOWSHIP_FULL_INR)} · or ${displayCoursePrice(RESEARCH_FELLOWSHIP_MONTHLY_INR)}`
+              : priceLabel}
           </p>
         </>
       ) : null}
@@ -459,8 +481,8 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
           >
             {isFellowship
               ? paymentOnly
-                ? `Confirm policies and pay ${priceLabel} via UPI. Only complete this if you received a selection offer.`
-                : "Confirm policies, share your details, and pay ₹19,999 incl. GST via UPI. Only complete this if you received a selection offer."
+                ? "Confirm policies, then choose full fee or monthly installment and pay via UPI. Only complete this if you received a selection offer."
+                : "Confirm policies, share your details, and pay via UPI (full ₹19,999 or monthly ₹6,999). Only complete this if you received a selection offer."
               : "Review and accept our policies, then share your details and pay via UPI. Access unlocks after we verify your UTR."}
           </p>
           <div
@@ -606,10 +628,67 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
           className="mt-8 space-y-5 rounded-2xl border border-white/8 bg-[var(--surface-1)] p-6"
         >
           <p className="text-sm text-muted">{stepPayLabel}</p>
+
+          {isFellowship ? (
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-medium text-text">
+                Choose how to pay
+              </legend>
+              <label
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm transition-colors ${
+                  fellowshipPlan === "monthly"
+                    ? "border-accent/50 bg-accent/5"
+                    : "border-white/10 hover:border-white/20"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="fellowship-plan"
+                  checked={fellowshipPlan === "monthly"}
+                  onChange={() => setFellowshipPlan("monthly")}
+                  className="mt-1 accent-[var(--accent)]"
+                />
+                <span>
+                  <span className="font-medium text-text">
+                    Monthly · {formatInr(RESEARCH_FELLOWSHIP_MONTHLY_INR)}
+                  </span>
+                  <span className="mt-0.5 block text-xs leading-relaxed text-muted">
+                    Installment option — pay this amount now via the monthly QR.
+                  </span>
+                </span>
+              </label>
+              <label
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm transition-colors ${
+                  fellowshipPlan === "full"
+                    ? "border-accent/50 bg-accent/5"
+                    : "border-white/10 hover:border-white/20"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="fellowship-plan"
+                  checked={fellowshipPlan === "full"}
+                  onChange={() => setFellowshipPlan("full")}
+                  className="mt-1 accent-[var(--accent)]"
+                />
+                <span>
+                  <span className="font-medium text-text">
+                    Full program · {formatInr(RESEARCH_FELLOWSHIP_FULL_INR)}{" "}
+                    incl. GST
+                  </span>
+                  <span className="mt-0.5 block text-xs leading-relaxed text-muted">
+                    One-time payment for the full fellowship.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+          ) : null}
+
           <div>
             <p className="text-lg font-medium text-text">
-              Pay exactly {formatInr(course.price_inr)}
-              {isFellowship ? " incl. GST" : ""}
+              Pay exactly {formatInr(payAmountInr)}
+              {isFellowship && fellowshipPlan === "full" ? " incl. GST" : ""}
+              {isFellowship && fellowshipPlan === "monthly" ? " (monthly)" : ""}
             </p>
             <p className="mt-2 text-xs leading-relaxed text-muted">
               Scan the QR with any UPI app, pay the exact amount, then paste your

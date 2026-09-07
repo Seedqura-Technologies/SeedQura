@@ -4,6 +4,17 @@ import { loadFellowshipAllowListEmails } from "./fellowship-selections.js";
 
 export const RESEARCH_FELLOWSHIP_ID = "research-fellowship";
 
+/** Full program fee (amount-locked UPI QR). */
+export const RESEARCH_FELLOWSHIP_FULL_INR = 19999;
+
+/** Monthly installment option (amount-locked UPI QR). */
+export const RESEARCH_FELLOWSHIP_MONTHLY_INR = 6999;
+
+export const RESEARCH_FELLOWSHIP_PAYMENT_AMOUNTS = new Set([
+  RESEARCH_FELLOWSHIP_FULL_INR,
+  RESEARCH_FELLOWSHIP_MONTHLY_INR,
+]);
+
 export const FELLOWSHIP_PAYMENT_MESSAGE =
   "Fellowship payment opens only after selection. Check your email for a payment link, or contact gethelp.seedqura@gmail.com if you were selected.";
 

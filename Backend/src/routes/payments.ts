@@ -11,7 +11,12 @@ import {
   sendMail,
 } from "../lib/mail.js";
 import { syncEnrollmentCalendar } from "../lib/enrollment-calendar-sync.js";
-import { fellowshipPaymentBlocked } from "../lib/fellowship-gate.js";
+import {
+  fellowshipPaymentBlocked,
+  RESEARCH_FELLOWSHIP_ID,
+  RESEARCH_FELLOWSHIP_PAYMENT_AMOUNTS,
+  RESEARCH_FELLOWSHIP_MONTHLY_INR,
+} from "../lib/fellowship-gate.js";
 
 export const paymentsRouter = Router();
 
@@ -639,6 +644,8 @@ paymentsRouter.post("/utr-submit", requireAuth, async (req: AuthedRequest, res) 
     const degree = String(req.body?.degree || "").trim();
     const yearOfStudy = String(req.body?.yearOfStudy || "").trim();
     const applicantPhone = String(req.body?.phone || "").trim();
+    const requestedAmountInr =
+      req.body?.amountInr != null ? Number(req.body.amountInr) : null;
 
     if (!courseId) {
       res.status(400).json({ error: "courseId required" });
@@ -729,6 +736,33 @@ paymentsRouter.post("/utr-submit", requireAuth, async (req: AuthedRequest, res) 
       return;
     }
 
+    // Fellowship: allow full ₹19,999 or monthly ₹6,999. Labs: course price only.
+    let amountInr = course.price_inr;
+    let paymentPlan: "full" | "monthly" | "standard" = "standard";
+    if (courseId === RESEARCH_FELLOWSHIP_ID) {
+      if (
+        requestedAmountInr == null ||
+        !RESEARCH_FELLOWSHIP_PAYMENT_AMOUNTS.has(requestedAmountInr)
+      ) {
+        res.status(400).json({
+          error:
+            "Choose full (₹19,999) or monthly (₹6,999) payment for the fellowship.",
+        });
+        return;
+      }
+      amountInr = requestedAmountInr;
+      paymentPlan =
+        requestedAmountInr === RESEARCH_FELLOWSHIP_MONTHLY_INR
+          ? "monthly"
+          : "full";
+    } else if (
+      requestedAmountInr != null &&
+      requestedAmountInr !== course.price_inr
+    ) {
+      res.status(400).json({ error: "Payment amount does not match this course" });
+      return;
+    }
+
     const now = new Date().toISOString();
     const enrollmentPayload = {
       status: "pending_payment",
@@ -774,7 +808,7 @@ paymentsRouter.post("/utr-submit", requireAuth, async (req: AuthedRequest, res) 
       })
       .eq("id", userId);
 
-    const amountPaise = course.price_inr * 100;
+    const amountPaise = amountInr * 100;
     const { data: existingPay } = await admin
       .from("payments")
       .select("id")
@@ -791,6 +825,9 @@ paymentsRouter.post("/utr-submit", requireAuth, async (req: AuthedRequest, res) 
       degree,
       yearOfStudy,
       phone,
+      amountInr,
+      paymentPlan,
+      catalogPriceInr: course.price_inr,
     };
 
     if (existingPay?.id) {

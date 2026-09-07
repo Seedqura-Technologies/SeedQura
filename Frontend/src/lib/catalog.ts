@@ -1,5 +1,8 @@
 import { getCourses } from "@/lib/data";
-import { displayCoursePrice } from "@/lib/course-pricing";
+import {
+  marketingPriceForCourse,
+  type MarketingPrice,
+} from "@/lib/course-pricing";
 import {
   isResearchFellowship,
   RESEARCH_FELLOWSHIP_APPLY_URL,
@@ -14,7 +17,12 @@ export type CatalogCourse = {
   level: string;
   duration: string;
   format: string;
+  /** Primary public price string (hero). */
   priceDisplay: string;
+  /** Optional secondary honesty line (e.g. full fee under monthly). */
+  priceSecondary: string | null;
+  /** Optional fee note for CTAs. */
+  priceNote: string | null;
   status: string;
   featured: boolean;
   features: string[];
@@ -50,6 +58,11 @@ export function mapToCatalogCourse(c: ApiCourse): CatalogCourse {
         : null;
   const enrollable = price != null && price > 0;
   const fellowship = isResearchFellowship(c.id);
+  const marketing: MarketingPrice = marketingPriceForCourse(
+    c.id,
+    price,
+    c.price_display || c.priceDisplay
+  );
   const ctaLabel = fellowship
     ? "Apply for Selection"
     : enrollable
@@ -69,7 +82,9 @@ export function mapToCatalogCourse(c: ApiCourse): CatalogCourse {
     level: c.level || "",
     duration: c.duration || "",
     format: c.format || "",
-    priceDisplay: displayCoursePrice(price, c.price_display || c.priceDisplay),
+    priceDisplay: marketing.hero,
+    priceSecondary: marketing.secondary,
+    priceNote: marketing.note,
     status: c.display_status || (typeof c.status === "string" ? c.status : "") || "",
     featured: !!c.featured,
     features: Array.isArray(c.features) ? c.features : [],
