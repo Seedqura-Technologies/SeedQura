@@ -2,10 +2,10 @@
 
 export const RESEARCH_FELLOWSHIP_ID = "research-fellowship";
 
-/** Full program fee (amount-locked UPI QR). */
+/** Full program fee charged through Razorpay. */
 export const RESEARCH_FELLOWSHIP_FULL_INR = 19999;
 
-/** Monthly installment option (amount-locked UPI QR) — soft entry vs full fee. */
+/** Monthly installment charged through Razorpay. */
 export const RESEARCH_FELLOWSHIP_MONTHLY_INR = 6999;
 
 export const RESEARCH_FELLOWSHIP_PAYMENT_AMOUNTS = [

@@ -216,6 +216,10 @@ create table if not exists public.payments (
 
 create index if not exists payments_order_idx on public.payments (razorpay_order_id);
 
+create unique index if not exists payments_razorpay_order_id_uidx
+  on public.payments (razorpay_order_id)
+  where razorpay_order_id is not null and razorpay_order_id <> '';
+
 -- ---------------------------------------------------------------------------
 -- Notifications
 -- ---------------------------------------------------------------------------

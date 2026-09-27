@@ -83,7 +83,8 @@ export function FellowshipEnrollClient() {
         <p className="text-sm leading-relaxed text-muted">
           Received a selection offer? Sign in with the email we selected you
           on, then complete payment within 72 hours — full fee or monthly
-          installment. We verify your UTR and unlock fellowship access.
+          installment. Razorpay confirms the payment and unlocks fellowship
+          access.
         </p>
 
         {signedIn === null ? (

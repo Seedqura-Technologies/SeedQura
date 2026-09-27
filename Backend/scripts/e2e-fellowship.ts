@@ -249,12 +249,51 @@ async function main() {
     return data.email;
   });
 
-  await step("Fellowship UTR submit after selection", async () => {
+  await step("Fellowship UTR rejects missing amountInr", async () => {
+    const { res, data } = await api("/api/payments/utr-submit", {
+      token: studentToken,
+      body: {
+        courseId: FELLOWSHIP_ID,
+        utr: `${UTR}A`,
+        fullName: STUDENT_NAME,
+        phone: "9876543210",
+        institution: "E2E Test College",
+        degree: "B.Tech / B.E.",
+        yearOfStudy: "3rd year",
+      },
+    });
+    if (res.status !== 400) fail(`expected 400, got ${res.status}`);
+    if (!String(data.error || "").toLowerCase().includes("full")) {
+      fail(`unexpected error: ${data.error}`);
+    }
+    return "rejected";
+  });
+
+  await step("Fellowship UTR rejects invalid amount", async () => {
+    const { res, data } = await api("/api/payments/utr-submit", {
+      token: studentToken,
+      body: {
+        courseId: FELLOWSHIP_ID,
+        utr: `${UTR}B`,
+        amountInr: 4999,
+        fullName: STUDENT_NAME,
+        phone: "9876543210",
+        institution: "E2E Test College",
+        degree: "B.Tech / B.E.",
+        yearOfStudy: "3rd year",
+      },
+    });
+    if (res.status !== 400) fail(`expected 400, got ${res.status}`);
+    return String(data.error || "rejected").slice(0, 60);
+  });
+
+  await step("Fellowship monthly installment UTR (₹6,999)", async () => {
     const { res, data } = await api("/api/payments/utr-submit", {
       token: studentToken,
       body: {
         courseId: FELLOWSHIP_ID,
         utr: UTR,
+        amountInr: 6999,
         fullName: STUDENT_NAME,
         phone: "9876543210",
         institution: "E2E Test College",
@@ -278,6 +317,68 @@ async function main() {
       fail(`payment_status=${row?.payment_status}`);
     }
     return row.payment_status;
+  });
+
+  await step("Payment record is monthly ₹6,999", async () => {
+    if (!SERVICE_KEY) fail("SUPABASE_SERVICE_ROLE_KEY required to verify payment");
+    const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data, error } = await admin
+      .from("payments")
+      .select("amount, currency, status, raw")
+      .eq("enrollment_id", enrollmentId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) fail(error.message);
+    if (!data) fail("payment row missing");
+    if (data.amount !== 6999 * 100) fail(`amount=${data.amount}`);
+    if (data.raw?.paymentPlan !== "monthly") {
+      fail(`paymentPlan=${data.raw?.paymentPlan}`);
+    }
+    if (data.raw?.amountInr !== 6999) fail(`amountInr=${data.raw?.amountInr}`);
+    return `₹${data.raw.amountInr} · ${data.raw.paymentPlan}`;
+  });
+
+  await step("Fellowship full fee UTR overwrite (₹19,999)", async () => {
+    const fullUtr = `${UTR}FULL`.slice(0, 22);
+    const { res, data } = await api("/api/payments/utr-submit", {
+      token: studentToken,
+      body: {
+        courseId: FELLOWSHIP_ID,
+        utr: fullUtr,
+        amountInr: 19999,
+        fullName: STUDENT_NAME,
+        phone: "9876543210",
+        institution: "E2E Test College",
+        degree: "B.Tech / B.E.",
+        yearOfStudy: "3rd year",
+      },
+    });
+    if (!res.ok) fail(data.error || `utr-submit full ${res.status}`);
+    return data.enrollmentId || enrollmentId;
+  });
+
+  await step("Payment record updated to full ₹19,999", async () => {
+    if (!SERVICE_KEY) fail("SUPABASE_SERVICE_ROLE_KEY required");
+    const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data, error } = await admin
+      .from("payments")
+      .select("amount, raw")
+      .eq("enrollment_id", enrollmentId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) fail(error.message);
+    if (!data) fail("payment row missing");
+    if (data.amount !== 19999 * 100) fail(`amount=${data.amount}`);
+    if (data.raw?.paymentPlan !== "full") {
+      fail(`paymentPlan=${data.raw?.paymentPlan}`);
+    }
+    return `₹${data.raw.amountInr} · ${data.raw.paymentPlan}`;
   });
 
   await step("Admin revoke fellowship selection", async () => {

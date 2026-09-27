@@ -1,7 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { MagneticButton } from "@/components/ui/MagneticButton";
@@ -51,19 +50,52 @@ const YEARS = [
   "Other",
 ] as const;
 
-/** Exact QR map — never fall back to a wrong amount-locked QR. */
-const QR_BY_PRICE: Record<number, { src: string; label: string }> = {
-  4999: { src: "/payments/upi-4999.jpg", label: "₹4,999" },
-  6999: { src: "/payments/upi-6999.jpg", label: "₹6,999 / month" },
-  19999: { src: "/payments/upi-19999.jpg", label: "₹19,999 · incl. GST" },
+type RazorpaySuccess = {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
 };
 
-function qrForPrice(priceInr: number | null | undefined): {
-  src: string;
-  label: string;
-} | null {
-  if (priceInr == null) return null;
-  return QR_BY_PRICE[priceInr] ?? null;
+type RazorpayFailed = {
+  error?: { description?: string };
+};
+
+type RazorpayCheckout = {
+  open: () => void;
+  on: (event: "payment.failed", handler: (response: RazorpayFailed) => void) => void;
+};
+
+function loadRazorpay(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") {
+      resolve(false);
+      return;
+    }
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+    );
+    if (existing) {
+      existing.addEventListener("load", () => resolve(true), { once: true });
+      existing.addEventListener("error", () => resolve(false), { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => RazorpayCheckout;
+  }
 }
 
 function formatInr(amount: number | null | undefined): string {
@@ -88,6 +120,7 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
   const [consentError, setConsentError] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const checkoutLock = useRef(false);
   const [loadError, setLoadError] = useState("");
 
   const [fullName, setFullName] = useState("");
@@ -95,7 +128,6 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
   const [institution, setInstitution] = useState("");
   const [degree, setDegree] = useState("");
   const [yearOfStudy, setYearOfStudy] = useState("");
-  const [utr, setUtr] = useState("");
   const [doneMessage, setDoneMessage] = useState("");
   const [pendingUtr, setPendingUtr] = useState<string | null>(null);
   const [pendingAt, setPendingAt] = useState<string | null>(null);
@@ -116,8 +148,6 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
     return course?.price_inr ?? null;
   }, [isFellowship, fellowshipPlan, course?.price_inr]);
 
-  const qr = useMemo(() => qrForPrice(payAmountInr), [payAmountInr]);
-
   const pageTitle = paymentOnly
     ? "Fellowship payment"
     : isFellowship
@@ -125,7 +155,7 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
       : "Enroll";
 
   const stepDetailsLabel = paymentOnly ? "Your details" : "Step 1 of 2 — Your details";
-  const stepPayLabel = paymentOnly ? "Pay via UPI" : "Step 2 of 2 — Pay via UPI";
+  const stepPayLabel = paymentOnly ? "Pay securely" : "Step 2 of 2 — Pay securely";
   const verifyHours = "24 hours";
 
   const priceLabel = useMemo(() => {
@@ -247,38 +277,133 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
     setStep("pay");
   }
 
-  async function submitUtr(e: FormEvent) {
-    e.preventDefault();
+  async function startCheckout() {
+    if (checkoutLock.current) return;
     setError("");
+    if (payAmountInr == null) {
+      setError("This course is not available for payment.");
+      return;
+    }
+    checkoutLock.current = true;
     setLoading(true);
     try {
-      const body: Record<string, unknown> = {
+      const loaded = await loadRazorpay();
+      if (!loaded || !window.Razorpay) {
+        throw new Error(
+          "Could not load Razorpay. Check your connection and try again."
+        );
+      }
+
+      const orderBody: Record<string, unknown> = {
         courseId,
-        utr: utr.trim(),
         fullName: fullName.trim(),
         phone: phone.replace(/\s/g, ""),
         institution: institution.trim(),
         degree,
         yearOfStudy,
       };
-      if (isFellowship && payAmountInr != null) {
-        body.amountInr = payAmountInr;
-      }
-      const res = await apiFetch("/payments/utr-submit", {
+      if (isFellowship) orderBody.amountInr = payAmountInr;
+
+      const order = await apiFetch("/payments/order", {
         method: "POST",
-        body: JSON.stringify(body),
+        body: JSON.stringify(orderBody),
       });
-      setDoneMessage(
-        res.message ||
-          `Submitted — we’ll verify your UTR and unlock access (usually within ${verifyHours}).`
-      );
-      setStep("done");
+
+      if (order.devMode) {
+        await apiFetch("/payments/verify", {
+          method: "POST",
+          body: JSON.stringify({
+            razorpay_order_id: order.orderId,
+            paymentId: order.paymentId,
+            enrollmentId: order.enrollmentId,
+            courseId,
+            devComplete: true,
+          }),
+        });
+        setDoneMessage(
+          `Payment recorded for ${course?.name || "this course"}. Your enrollment is active.`
+        );
+        setStep("done");
+        setLoading(false);
+        return;
+      }
+
+      if (!order.keyId || !order.orderId) {
+        throw new Error("Payment gateway is not configured. Try again shortly.");
+      }
+
+      const checkout = new window.Razorpay({
+        key: order.keyId,
+        amount: order.amount,
+        currency: order.currency || "INR",
+        name: "Seedqura",
+        description: order.courseName || course?.name || "Enrollment",
+        order_id: order.orderId,
+        prefill: {
+          name: fullName.trim() || order.studentName,
+          email: order.studentEmail || signedInEmail,
+          contact: phone.replace(/\s/g, ""),
+        },
+        theme: { color: "#22D3A5" },
+        handler: async (response: RazorpaySuccess) => {
+          const verifyBody = JSON.stringify({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+            paymentId: order.paymentId,
+            enrollmentId: order.enrollmentId,
+            courseId,
+          });
+          try {
+            try {
+              await apiFetch("/payments/verify", {
+                method: "POST",
+                body: verifyBody,
+              });
+            } catch {
+              await apiFetch("/payments/verify", {
+                method: "POST",
+                body: verifyBody,
+              });
+            }
+            setDoneMessage(
+              `Payment confirmed for ${order.courseName || course?.name || "your course"}. Your enrollment is active.`
+            );
+            setStep("done");
+          } catch (err) {
+            const raw =
+              err instanceof Error ? err.message : "Verification failed";
+            setError(
+              `${raw} If money was deducted, email gethelp.seedqura@gmail.com with your payment id — do not pay again.`
+            );
+          } finally {
+            setLoading(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            checkoutLock.current = false;
+            setLoading(false);
+          },
+        },
+      });
+
+      checkout.on("payment.failed", (response) => {
+        const description =
+          response.error?.description || "Payment did not complete.";
+        checkoutLock.current = false;
+        setError(description);
+        setLoading(false);
+        void apiFetch("/payments/failed", {
+          method: "POST",
+          body: JSON.stringify({ courseId, paymentId: order.paymentId }),
+        }).catch(() => undefined);
+      });
+
+      checkout.open();
     } catch (err) {
-      const raw = err instanceof Error ? err.message : "Submit failed";
-      setError(
-        `${raw} Your payment is safe — do not pay again. Email gethelp.seedqura@gmail.com with your UTR if this continues.`
-      );
-    } finally {
+      checkoutLock.current = false;
+      setError(err instanceof Error ? err.message : "Could not start payment");
       setLoading(false);
     }
   }
@@ -427,13 +552,12 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
     return (
       <div className={paymentOnly ? "text-center" : "mx-auto max-w-lg text-center"}>
         <h2 className={paymentOnly ? "text-lg font-medium text-text" : "text-3xl font-medium tracking-tight text-text"}>
-          Payment submitted
+          Payment confirmed
         </h2>
         <p className="mt-6 text-sm leading-relaxed text-muted">{doneMessage}</p>
         <p className="mt-3 text-sm text-muted">
-          You’ll see <span className="text-text">Pending verification</span> on
-          your dashboard until we approve. If it&apos;s not unlocked within{" "}
-          {verifyHours}, email gethelp.seedqura@gmail.com — do not pay again.
+          Access is unlocked on your dashboard. If the course does not appear,
+          email gethelp.seedqura@gmail.com — do not pay again.
         </p>
         <div className="mt-8 flex flex-col gap-3">
           <MagneticButton
@@ -481,9 +605,9 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
           >
             {isFellowship
               ? paymentOnly
-                ? "Confirm policies, then choose full fee or monthly installment and pay via UPI. Only complete this if you received a selection offer."
-                : "Confirm policies, share your details, and pay via UPI (full ₹19,999 or monthly ₹6,999). Only complete this if you received a selection offer."
-              : "Review and accept our policies, then share your details and pay via UPI. Access unlocks after we verify your UTR."}
+                ? "Confirm policies, then choose full fee or monthly installment and pay with Razorpay. Only complete this if you received a selection offer."
+                : "Confirm policies, share your details, and pay with Razorpay (full ₹19,999 or monthly ₹6,999). Only complete this if you received a selection offer."
+              : "Review and accept our policies, then share your details and pay securely with Razorpay. Access unlocks as soon as payment succeeds."}
           </p>
           <div
             className={`space-y-5 rounded-2xl border border-white/8 bg-[var(--surface-1)] p-6 ${paymentOnly ? "mt-4" : "mt-8"}`}
@@ -623,10 +747,7 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
       )}
 
       {step === "pay" && (
-        <form
-          onSubmit={submitUtr}
-          className="mt-8 space-y-5 rounded-2xl border border-white/8 bg-[var(--surface-1)] p-6"
-        >
+        <div className="mt-8 space-y-5 rounded-2xl border border-white/8 bg-[var(--surface-1)] p-6">
           <p className="text-sm text-muted">{stepPayLabel}</p>
 
           {isFellowship ? (
@@ -653,7 +774,7 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
                     Monthly · {formatInr(RESEARCH_FELLOWSHIP_MONTHLY_INR)}
                   </span>
                   <span className="mt-0.5 block text-xs leading-relaxed text-muted">
-                    Installment option — pay this amount now via the monthly QR.
+                    Installment option — pay this amount now.
                   </span>
                 </span>
               </label>
@@ -686,62 +807,27 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
 
           <div>
             <p className="text-lg font-medium text-text">
-              Pay exactly {formatInr(payAmountInr)}
+              Pay {formatInr(payAmountInr)}
               {isFellowship && fellowshipPlan === "full" ? " incl. GST" : ""}
               {isFellowship && fellowshipPlan === "monthly" ? " (monthly)" : ""}
             </p>
             <p className="mt-2 text-xs leading-relaxed text-muted">
-              Scan the QR with any UPI app, pay the exact amount, then paste your
-              UTR below for verification.
+              You&apos;ll complete payment in Razorpay with UPI, card, or net
+              banking. Enrollment unlocks as soon as the payment succeeds.
             </p>
           </div>
-
-          {qr ? (
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-white p-3">
-              <Image
-                src={qr.src}
-                alt={`UPI QR for ${qr.label}`}
-                width={480}
-                height={480}
-                className="mx-auto h-auto w-full max-w-[280px]"
-                priority
-              />
-            </div>
-          ) : (
-            <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-              QR isn&apos;t available for this amount. Email{" "}
-              <Link
-                href="mailto:gethelp.seedqura@gmail.com"
-                className="font-medium text-text underline"
-              >
-                gethelp.seedqura@gmail.com
-              </Link>{" "}
-              for payment help.
-            </p>
-          )}
-
-          <label className="block text-sm">
-            <span className="text-muted">UTR / UPI transaction ID</span>
-            <input
-              required
-              value={utr}
-              onChange={(e) => setUtr(e.target.value)}
-              placeholder="Paste from your UPI app"
-              className="input-premium mt-1.5 font-mono tracking-wide"
-              autoComplete="off"
-            />
-          </label>
 
           {error && <p className="text-sm text-error">{error}</p>}
 
           <div className="flex flex-col gap-3 pt-1">
             <MagneticButton
-              type="submit"
+              type="button"
               variant="primary"
               className="w-full"
-              disabled={loading}
+              disabled={loading || payAmountInr == null}
+              onClick={() => void startCheckout()}
             >
-              {loading ? "Submitting…" : "Submit for verification"}
+              {loading ? "Opening checkout…" : `Pay ${formatInr(payAmountInr)}`}
             </MagneticButton>
             <button
               type="button"
@@ -765,7 +851,7 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
               gethelp.seedqura@gmail.com
             </Link>
           </p>
-        </form>
+        </div>
       )}
     </div>
   );
