@@ -7,6 +7,12 @@ import {
   isResearchFellowship,
   RESEARCH_FELLOWSHIP_APPLY_URL,
 } from "@/lib/fellowship";
+import {
+  applyWorkshopCta,
+  isWorkshopCourseId,
+  withLiveWorkshop,
+  WORKSHOP_REGISTER_URL,
+} from "@/lib/workshop";
 
 export type CatalogCourse = {
   id: string;
@@ -63,17 +69,22 @@ export function mapToCatalogCourse(c: ApiCourse): CatalogCourse {
     price,
     c.price_display || c.priceDisplay
   );
+  const workshop = isWorkshopCourseId(c.id);
   const ctaLabel = fellowship
     ? "Apply for Selection"
-    : enrollable
-      ? "Enroll Now"
-      : "Get In Touch";
+    : workshop
+      ? "Register & pay"
+      : enrollable
+        ? "Enroll Now"
+        : "Get In Touch";
   const ctaHref = fellowship
     ? RESEARCH_FELLOWSHIP_APPLY_URL
-    : enrollable
-      ? `/enroll/${c.id}`
-      : "/#contact";
-  return {
+    : workshop
+      ? WORKSHOP_REGISTER_URL
+      : enrollable
+        ? `/enroll/${c.id}`
+        : "/#contact";
+  return applyWorkshopCta({
     id: c.id,
     name: c.name,
     tagline: c.tagline || "",
@@ -90,26 +101,28 @@ export function mapToCatalogCourse(c: ApiCourse): CatalogCourse {
     features: Array.isArray(c.features) ? c.features : [],
     price_inr: price,
     cta: { label: ctaLabel, href: ctaHref },
-  };
+  });
 }
 
 export function jsonCatalogFallback(): CatalogCourse[] {
-  return getCourses().map((c) =>
-    mapToCatalogCourse({
-      id: c.id,
-      name: c.name,
-      tagline: c.tagline,
-      description: c.description,
-      category: c.category,
-      level: c.level,
-      duration: c.duration,
-      format: c.format,
-      priceDisplay: c.priceDisplay,
-      display_status: c.status,
-      featured: c.featured,
-      features: c.features,
-      price: c.price,
-    })
+  return withLiveWorkshop(
+    getCourses().map((c) =>
+      mapToCatalogCourse({
+        id: c.id,
+        name: c.name,
+        tagline: c.tagline,
+        description: c.description,
+        category: c.category,
+        level: c.level,
+        duration: c.duration,
+        format: c.format,
+        priceDisplay: c.priceDisplay,
+        display_status: c.status,
+        featured: c.featured,
+        features: c.features,
+        price: c.price,
+      })
+    )
   );
 }
 
@@ -120,7 +133,7 @@ export async function fetchPublishedCourses(): Promise<CatalogCourse[]> {
     const data = await res.json();
     const list = Array.isArray(data.courses) ? data.courses : [];
     if (list.length === 0) return jsonCatalogFallback();
-    return list.map(mapToCatalogCourse);
+    return withLiveWorkshop(list.map(mapToCatalogCourse));
   } catch {
     return jsonCatalogFallback();
   }

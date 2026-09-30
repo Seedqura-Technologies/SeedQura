@@ -1,5 +1,6 @@
 /** Canonical display strings for course and fellowship prices. */
 const CANONICAL_BY_INR: Record<number, string> = {
+  499: "₹499",
   4999: "₹4,999",
   6999: "₹6,999 / month",
   19999: "₹19,999 · incl. GST",

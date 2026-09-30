@@ -176,6 +176,78 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.academy-badge-live {
+  border-color: rgba(232, 168, 60, 0.35);
+  background: rgba(232, 168, 60, 0.1);
+  color: #f0c46a;
+}
+
+/* ── Live Clinic (weekend invitation) ───────────────────────── */
+.academy-live-clinic {
+  border-radius: 22px;
+  border: 1px solid rgba(34, 211, 165, 0.22);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(13, 25, 20, 0.98) 0%,
+      rgba(8, 16, 13, 0.99) 100%
+    );
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(232, 168, 60, 0.06),
+    0 0 60px rgba(34, 211, 165, 0.08);
+}
+
+.academy-live-clinic-glow {
+  pointer-events: none;
+  position: absolute;
+  inset: -20% -10% auto auto;
+  width: 55%;
+  height: 70%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(34, 211, 165, 0.16) 0%,
+    rgba(232, 168, 60, 0.06) 45%,
+    transparent 70%
+  );
+  filter: blur(8px);
+}
+
+.academy-live-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.3rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--academy-text-muted);
+}
+
+.academy-live-pulse {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--academy-sage);
+  box-shadow: 0 0 0 0 rgba(34, 211, 165, 0.45);
+  animation: academy-live-pulse 1.8s ease-out infinite;
+}
+
+@keyframes academy-live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 211, 165, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(34, 211, 165, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 211, 165, 0);
+  }
+}
+
 .academy-cta-panel {
   position: relative;
   overflow: hidden;

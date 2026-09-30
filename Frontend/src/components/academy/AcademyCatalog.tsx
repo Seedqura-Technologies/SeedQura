@@ -16,6 +16,7 @@ import {
   jsonCatalogFallback,
   type CatalogCourse,
 } from "@/lib/catalog";
+import { isWorkshopCourseId } from "@/lib/workshop";
 import { ScrollReveal } from "@/components/motion/ScrollReveal";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import {
@@ -39,6 +40,14 @@ function usePublishedCourses() {
 }
 
 function CategoryIcon({ category }: { category: string }) {
+  if (category === "Live") {
+    return (
+      <span
+        className="academy-live-pulse !h-1.5 !w-1.5 !shadow-none"
+        aria-hidden
+      />
+    );
+  }
   if (category === "Program") {
     return <LeafSilhouette className="h-3.5 w-2.5 text-[var(--academy-sage)]" opacity={0.9} />;
   }
@@ -49,6 +58,7 @@ function CategoryIcon({ category }: { category: string }) {
 }
 
 function categoryBadgeClass(category: string) {
+  if (category === "Live") return "academy-badge academy-badge-live";
   if (category === "Partnership") return "academy-badge academy-badge-partnership";
   return "academy-badge";
 }
@@ -198,8 +208,10 @@ const FEATURED_MARKS: Array<"leaf" | "branch" | "petal"> = ["leaf", "branch", "p
 
 export function AcademyCatalog() {
   const courses = usePublishedCourses();
-  const featured = courses.filter((c) => c.featured);
-  const rest = courses.filter((c) => !c.featured);
+  // Live clinic has its own featured band above — keep the grid for multi-week programs
+  const catalog = courses.filter((c) => !isWorkshopCourseId(c.id));
+  const featured = catalog.filter((c) => c.featured);
+  const rest = catalog.filter((c) => !c.featured);
 
   return (
     <section id="courses" className="relative pb-20 pt-2 md:pb-28">

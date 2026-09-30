@@ -3,13 +3,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { LeafSilhouette } from "@/components/academy/BotanicalMarks";
+import { isWorkshopActive, WORKSHOP_COURSE_ID } from "@/lib/workshop";
 
 export function AcademyHeader() {
   const [scrolled, setScrolled] = useState(false);
+  const [clinicLive, setClinicLive] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
     onScroll();
+    setClinicLive(isWorkshopActive());
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -27,20 +30,34 @@ export function AcademyHeader() {
           <span className="text-[var(--academy-muted)]" aria-hidden>
             /
           </span>
-          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--academy-text-muted)]">
+          <Link
+            href="/academy"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--academy-text-muted)] transition-colors hover:text-[var(--academy-sage)]"
+          >
             <LeafSilhouette className="h-4 w-3 text-[var(--academy-sage)]" opacity={0.85} />
             Learnings
-          </span>
+          </Link>
         </div>
 
-        <Link
-          href="/"
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-[var(--academy-text-muted)] transition-colors hover:bg-white/[0.04] hover:text-[var(--academy-text)]"
-        >
-          <span aria-hidden>←</span>
-          <span className="hidden sm:inline">Back to Seedqura</span>
-          <span className="sm:hidden">Back</span>
-        </Link>
+        <div className="flex items-center gap-1 sm:gap-2">
+          {clinicLive ? (
+            <Link
+              href={`/academy/${WORKSHOP_COURSE_ID}`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(232,168,60,0.3)] bg-[rgba(232,168,60,0.08)] px-2.5 py-1 text-[11px] font-semibold tracking-wide text-[#f0c46a] transition hover:border-[rgba(232,168,60,0.5)] hover:bg-[rgba(232,168,60,0.12)]"
+            >
+              <span className="academy-live-pulse" aria-hidden />
+              Clinic
+            </Link>
+          ) : null}
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-[var(--academy-text-muted)] transition-colors hover:bg-white/[0.04] hover:text-[var(--academy-text)]"
+          >
+            <span aria-hidden>←</span>
+            <span className="hidden sm:inline">Back to Seedqura</span>
+            <span className="sm:hidden">Back</span>
+          </Link>
+        </div>
       </div>
     </header>
   );

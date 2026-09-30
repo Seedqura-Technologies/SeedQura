@@ -17,6 +17,58 @@ export type LabCourseDetail = {
 };
 
 export const LAB_COURSE_DETAILS: Record<string, LabCourseDetail> = {
+  "ai-healthcare-clinic": {
+    id: "ai-healthcare-clinic",
+    heroHeadline: "Sit with the people who already live this.",
+    heroSubline: "3 & 4 October · 10:00–12:00 IST · live online · ₹499",
+    projectStory: "Two-morning live clinic",
+    uspChips: [
+      "AIIMS clinical floor",
+      "Startup builder lens",
+      "Certificate included",
+    ],
+    premiumBlurb:
+      "Not a slide tour of buzzwords. A clinician who has watched AI arrive in OT and ICU — and a mentor who has walked founders from idea to product — share the same room with you for two mornings.",
+    learnings: [
+      "Where AI already changes decisions on the care floor — and where it still fails quietly",
+      "How clinical judgment and model output should argue with each other",
+      "What healthcare startups actually ship first (and what they wait on)",
+      "How to ask better questions if you are building, studying, or joining a medtech team",
+    ],
+    deliverables: [
+      {
+        label: "Day 01",
+        title: "AI on the care floor",
+        description:
+          "Dr. Bhavna Gupta — AIIMS Rishikesh. OT, ICU, and the human cost of wrong confidence.",
+      },
+      {
+        label: "Day 02",
+        title: "Building what ships",
+        description:
+          "Dr. S. Vaibhav — startup mentoring. From clinical insight to a product people will pay for.",
+      },
+      {
+        label: "Keep",
+        title: "Certificate + notes",
+        description:
+          "Participation certificate and a short clinic brief you can share with your team.",
+      },
+    ],
+    tools: "Live session · Q&A · certificate of participation",
+    audience:
+      "Medical students, engineers, founders, and researchers who want an honest view of AI in healthcare — not a sales deck.",
+    prerequisites: "Curiosity and a quiet two hours each morning. No coding required.",
+    trustLine:
+      "Hosted by Seedqura Learnings. Mentors speak from practice — AIIMS clinical work and startup mentorship — not theory alone.",
+    honestyLines: [
+      "This is a live conversation, not a multi-week lab with GitHub deliverables.",
+      "You are registered only after Razorpay payment succeeds; a receipt is emailed to you.",
+    ],
+    ecosystemLine:
+      "Want the deep build after the clinic? Explore Frameworks Lab, Signal Lab, or the Research Fellowship below.",
+    ctaHeadline: "Reserve your seat — checkout opens Razorpay.",
+  },
   "frameworks-lab": {
     id: "frameworks-lab",
     heroHeadline: "Ship computer vision projects recruiters can run.",

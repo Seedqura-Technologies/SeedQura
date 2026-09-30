@@ -22,6 +22,7 @@ import {
   isResearchFellowship,
   RESEARCH_FELLOWSHIP_PAY_ANCHOR,
 } from "@/lib/fellowship";
+import { isWorkshopCourseId } from "@/lib/workshop";
 
 type Props = {
   courseId: string;
@@ -60,7 +61,12 @@ function SectionHeading({ children }: { children: ReactNode }) {
 }
 
 function EnrollSidebar({ course, detail }: { course: CatalogCourse; detail: LabCourseDetail }) {
-  const feeLabel = course.category === "Program" ? "Program fee" : "Course fee";
+  const workshop = isWorkshopCourseId(course.id);
+  const feeLabel = workshop
+    ? "Session fee"
+    : course.category === "Program"
+      ? "Program fee"
+      : "Course fee";
   const fellowship = isResearchFellowship(course.id);
 
   return (
@@ -81,6 +87,12 @@ function EnrollSidebar({ course, detail }: { course: CatalogCourse; detail: LabC
           <p className="mt-3 text-xs leading-relaxed text-[var(--academy-sage)]/90">
             Monthly installment after selection — or one full payment. Apply
             free either way.
+          </p>
+        ) : null}
+        {workshop ? (
+          <p className="mt-3 text-xs leading-relaxed text-[var(--academy-sage)]/90">
+            Secure Razorpay checkout. You are registered only after payment
+            succeeds.
           </p>
         ) : null}
         <ul className="mt-5 space-y-3 text-sm text-[var(--academy-text-muted)]">
@@ -220,7 +232,8 @@ export function AcademyCourseDetailView({ courseId, detail }: Props) {
                   {detail.heroSubline}
                 </p>
                 <p className="mt-4 text-sm font-medium text-[var(--academy-sage)]">
-                  Project: {detail.projectStory}
+                  {course.category === "Live" ? "Format" : "Project"}:{" "}
+                  {detail.projectStory}
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2">
                   {detail.uspChips.map((chip) => (
@@ -242,7 +255,9 @@ export function AcademyCourseDetailView({ courseId, detail }: Props) {
 
             <ScrollReveal delay={0.08}>
               <section className="max-w-2xl">
-                <SectionHeading>Outcomes</SectionHeading>
+                <SectionHeading>
+                  {course.category === "Live" ? "What you will hear" : "Outcomes"}
+                </SectionHeading>
                 <ul className="mt-5 space-y-3">
                   {detail.learnings.map((item) => (
                     <li
@@ -258,7 +273,9 @@ export function AcademyCourseDetailView({ courseId, detail }: Props) {
 
             <ScrollReveal delay={0.1}>
               <section>
-                <SectionHeading>Artifacts</SectionHeading>
+                <SectionHeading>
+                  {course.category === "Live" ? "Clinic agenda" : "Artifacts"}
+                </SectionHeading>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {detail.deliverables.map((item) => (
                     <div key={item.label} className="academy-detail-panel p-4">

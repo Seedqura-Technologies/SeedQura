@@ -1,6 +1,26 @@
 {
   "courses": [
     {
+      "id": "ai-healthcare-clinic",
+      "name": "AI Care Clinic",
+      "tagline": "Where the ward meets the whiteboard.",
+      "description": "Two live mornings with an AIIMS clinician and a startup builder — AI on the care floor, judgment that stays human, and how medical products actually ship.",
+      "category": "Live",
+      "level": "Open to all curious minds",
+      "duration": "3 & 4 Oct · 10:00–12:00 IST",
+      "format": "Live online · certificate included",
+      "price": 499,
+      "currency": "INR",
+      "priceDisplay": "₹499",
+      "status": "This weekend",
+      "featured": true,
+      "features": [
+        "AIIMS Rishikesh clinical perspective",
+        "Startup building for healthcare AI",
+        "Certificate of participation"
+      ]
+    },
+    {
       "id": "frameworks-lab",
       "name": "Frameworks Lab",
       "tagline": "See the world in code.",

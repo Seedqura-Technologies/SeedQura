@@ -11,18 +11,21 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpRight, X } from "lucide-react";
+import {
+  WORKSHOP_EXPIRES_AT,
+  WORKSHOP_REGISTER_URL,
+  WORKSHOP_STORAGE_KEY,
+} from "@/lib/workshop";
 
-/** Live Razorpay Payment Page — AI Healthcare workshop */
-export const WORKSHOP_REGISTER_URL = "https://rzp.io/rzp/b8KUI9s";
+export { WORKSHOP_REGISTER_URL };
 
-const STORAGE_KEY = "seedqura.workshop.promo.ai-healthcare-2026-10";
-/** Hide after workshop weekend */
-const EXPIRES_AT = Date.parse("2026-10-05T23:59:59+05:30");
+const STORAGE_KEY = WORKSHOP_STORAGE_KEY;
 /** Brief beat after paint — invitation, not ambush */
 const OPEN_DELAY_MS = 1400;
 const DISMISS_DAYS = 2;
 
-const PUBLIC_PREFIXES = ["/", "/academy", "/research", "/about", "/contact"];
+/** Homepage + research/about — Academy has its own Live Clinic band */
+const PUBLIC_PREFIXES = ["/", "/research", "/about", "/contact"];
 
 function isPublicMarketingPath(pathname: string): boolean {
   if (pathname.startsWith("/dashboard")) return false;
@@ -32,6 +35,7 @@ function isPublicMarketingPath(pathname: string): boolean {
   if (pathname.startsWith("/apply")) return false;
   if (pathname.startsWith("/enroll")) return false;
   if (pathname.startsWith("/auth")) return false;
+  if (pathname.startsWith("/academy")) return false;
   return PUBLIC_PREFIXES.some(
     (p) => pathname === p || (p !== "/" && pathname.startsWith(p))
   );
@@ -39,7 +43,7 @@ function isPublicMarketingPath(pathname: string): boolean {
 
 function shouldAutoOpen(): boolean {
   if (typeof window === "undefined") return false;
-  if (Date.now() > EXPIRES_AT) return false;
+  if (Date.now() > WORKSHOP_EXPIRES_AT) return false;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return true;
