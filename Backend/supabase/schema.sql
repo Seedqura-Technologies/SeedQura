@@ -192,6 +192,25 @@ begin
   end;
 end $$;
 
+do $$
+begin
+  begin
+    alter table public.enrollments
+      add constraint enrollments_payment_plan_check
+      check (
+        payment_plan is null
+        or payment_plan in ('full', 'monthly', 'standard')
+      );
+  exception
+    when duplicate_object then null;
+  end;
+end $$;
+
+create index if not exists enrollments_installment_due_idx
+  on public.enrollments (next_installment_due_at)
+  where payment_status = 'partial'
+    and next_installment_due_at is not null;
+
 create index if not exists enrollments_utr_idx
   on public.enrollments (utr)
   where utr is not null and utr <> '';

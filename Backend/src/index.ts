@@ -9,6 +9,7 @@ import { studentRouter } from "./routes/student.js";
 import { adminRouter } from "./routes/admin.js";
 import { connectRedis, pingRedis, isRedisEnabled } from "./lib/redis.js";
 import { rateLimit } from "./middleware/rateLimit.js";
+import { ensureFellowshipInstallmentsSchema } from "./lib/ensure-fellowship-installments.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -20,9 +21,11 @@ app.use(
 );
 app.use(express.json({ limit: "2mb" }));
 
+let installmentsSchemaReady = false;
+
 app.get("/health", async (_req, res) => {
   const redis = isRedisEnabled() ? await pingRedis() : null;
-  res.json({ ok: true, redis });
+  res.json({ ok: true, redis, installmentsSchemaReady });
 });
 
 app.use("/api/contact", rateLimit("contact"), contactRouter);
@@ -42,9 +45,15 @@ async function start() {
     );
   }
 
+  await ensureFellowshipInstallmentsSchema();
+  installmentsSchemaReady = true;
+
   app.listen(PORT, () => {
     console.log(`Seedqura API running on http://localhost:${PORT}`);
   });
 }
 
-start();
+start().catch((err) => {
+  console.error("[boot] failed", err);
+  process.exit(1);
+});
