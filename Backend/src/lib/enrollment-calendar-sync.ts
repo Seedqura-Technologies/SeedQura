@@ -50,7 +50,8 @@ export function resolveEnrollmentCalendarDirection(enrollment: {
 }): EnrollmentCalendarDirection {
   if (
     enrollment.status === "active" &&
-    enrollment.payment_status === "paid"
+    (enrollment.payment_status === "paid" ||
+      enrollment.payment_status === "partial")
   ) {
     return "add";
   }

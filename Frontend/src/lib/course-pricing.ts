@@ -38,9 +38,9 @@ export type MarketingPrice = {
 
 export function fellowshipMarketingPrice(): MarketingPrice {
   return {
-    hero: "₹6,999/mo",
+    hero: "₹6,999 × 3",
     secondary: "or ₹19,999 full · incl. GST",
-    note: "Apply free · pay only if selected",
+    note: "Apply free · pay only if selected · monthly = 3 installments",
   };
 }
 

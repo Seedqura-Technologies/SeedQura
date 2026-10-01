@@ -16,6 +16,10 @@ type Enrollment = {
   applicant_phone?: string | null;
   applicant_name?: string | null;
   utr_submitted_at?: string | null;
+  payment_plan?: string | null;
+  installments_total?: number | null;
+  installments_paid?: number | null;
+  next_installment_due_at?: string | null;
   course?: { id: string; name: string } | null;
   profile?: { id: string; full_name: string; email: string | null } | null;
   payments?: {
@@ -28,11 +32,12 @@ type Enrollment = {
     raw?: {
       paymentPlan?: string;
       amountInr?: number;
+      installmentNumber?: number;
     } | null;
   }[];
 };
 
-type Filter = "awaiting_verification" | "paid" | "all";
+type Filter = "awaiting_verification" | "paid" | "partial" | "all";
 
 function formatAmount(amount?: number, currency = "INR") {
   if (amount == null) return "—";
@@ -101,6 +106,7 @@ export default function AdminEnrollmentsPage() {
 
   const filters: { id: Filter; label: string }[] = [
     { id: "awaiting_verification", label: "Awaiting verification" },
+    { id: "partial", label: "Installments due" },
     { id: "paid", label: "Paid" },
     { id: "all", label: "All" },
   ];
@@ -168,10 +174,24 @@ export default function AdminEnrollmentsPage() {
                       <div className="text-xs text-muted">
                         Expected: {formatAmount(pay?.amount, pay?.currency)}
                         {pay?.raw?.paymentPlan === "monthly"
-                          ? " · monthly"
+                          ? pay?.raw?.installmentNumber
+                            ? ` · monthly #${pay.raw.installmentNumber}`
+                            : " · monthly"
                           : pay?.raw?.paymentPlan === "full"
                             ? " · full"
                             : ""}
+                        {e.payment_plan === "monthly" &&
+                        e.installments_total != null ? (
+                          <div className="text-xs text-muted">
+                            Plan: {e.installments_paid ?? 0}/
+                            {e.installments_total} paid
+                            {e.next_installment_due_at
+                              ? ` · next ${new Date(
+                                  e.next_installment_due_at
+                                ).toLocaleDateString("en-IN")}`
+                              : ""}
+                          </div>
+                        ) : null}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -207,7 +227,9 @@ export default function AdminEnrollmentsPage() {
                             ? "text-amber-400"
                             : e.payment_status === "paid"
                               ? "text-accent"
-                              : "text-muted"
+                              : e.payment_status === "partial"
+                                ? "text-amber-300"
+                                : "text-muted"
                         }
                       >
                         {e.payment_status}

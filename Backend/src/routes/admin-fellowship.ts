@@ -1,5 +1,6 @@
 import type { Router } from "express";
 import type { AuthedRequest } from "../middleware/auth.js";
+import { getSupabaseAdmin } from "../lib/supabase.js";
 import {
   addFellowshipSelection,
   countActiveFellowshipSelections,
@@ -10,8 +11,24 @@ import {
   normalizeFellowshipEmail,
   revokeFellowshipSelection,
 } from "../lib/fellowship-selections.js";
-import { invalidateFellowshipAllowListCache } from "../lib/fellowship-gate.js";
+import {
+  invalidateFellowshipAllowListCache,
+  RESEARCH_FELLOWSHIP_ID,
+  RESEARCH_FELLOWSHIP_MONTHLY_INR,
+} from "../lib/fellowship-gate.js";
 import { sendFellowshipOfferEmail } from "../lib/fellowship-offer-mail.js";
+import {
+  addDaysIso,
+  nextInstallmentNumber,
+  RESEARCH_FELLOWSHIP_INSTALLMENT_COUNT,
+  RESEARCH_FELLOWSHIP_REMINDER_COOLDOWN_DAYS,
+  RESEARCH_FELLOWSHIP_REMINDER_WINDOW_DAYS,
+} from "../lib/fellowship-installments.js";
+import {
+  fellowshipInstallmentReminderEmail,
+  sendMail,
+} from "../lib/mail.js";
+import { createNotification } from "../lib/notifications.js";
 
 export function registerAdminFellowshipRoutes(adminRouter: Router): void {
   adminRouter.get("/fellowship-selections", async (_req, res) => {
@@ -176,6 +193,130 @@ export function registerAdminFellowshipRoutes(adminRouter: Router): void {
           return;
         }
         res.status(500).json({ error: "Failed to revoke selection" });
+      }
+    }
+  );
+
+  /** Send due/overdue monthly installment reminders (safe to run daily). */
+  adminRouter.post(
+    "/fellowship-installment-reminders",
+    async (_req: AuthedRequest, res) => {
+      try {
+        const admin = getSupabaseAdmin();
+        const now = new Date();
+        const windowEnd = addDaysIso(
+          now,
+          RESEARCH_FELLOWSHIP_REMINDER_WINDOW_DAYS
+        );
+        const cooldownBefore = addDaysIso(
+          now,
+          -RESEARCH_FELLOWSHIP_REMINDER_COOLDOWN_DAYS
+        );
+
+        const { data: rows, error } = await admin
+          .from("enrollments")
+          .select(
+            "id, user_id, installments_paid, installments_total, installment_amount_inr, next_installment_due_at, installment_reminder_sent_at, applicant_name, profile:profiles(full_name, email)"
+          )
+          .eq("course_id", RESEARCH_FELLOWSHIP_ID)
+          .eq("payment_status", "partial")
+          .eq("payment_plan", "monthly")
+          .not("next_installment_due_at", "is", null)
+          .lte("next_installment_due_at", windowEnd);
+
+        if (error) throw error;
+
+        const site =
+          process.env.NEXT_PUBLIC_SITE_URL || "https://www.seedqura.com";
+        const payUrl = `${site}/enroll/${RESEARCH_FELLOWSHIP_ID}#pay`;
+        let sent = 0;
+        let skipped = 0;
+        const errors: string[] = [];
+
+        for (const row of rows || []) {
+          const reminderAt = row.installment_reminder_sent_at
+            ? new Date(row.installment_reminder_sent_at).getTime()
+            : 0;
+          if (reminderAt && reminderAt > new Date(cooldownBefore).getTime()) {
+            skipped += 1;
+            continue;
+          }
+
+          const profile = Array.isArray(row.profile)
+            ? row.profile[0]
+            : row.profile;
+          const email = profile?.email;
+          if (!email) {
+            skipped += 1;
+            continue;
+          }
+
+          const name =
+            profile?.full_name || row.applicant_name || "there";
+          const installmentNumber = nextInstallmentNumber({
+            payment_plan: "monthly",
+            installments_total:
+              row.installments_total || RESEARCH_FELLOWSHIP_INSTALLMENT_COUNT,
+            installments_paid: row.installments_paid || 0,
+            installment_amount_inr:
+              row.installment_amount_inr || RESEARCH_FELLOWSHIP_MONTHLY_INR,
+            next_installment_due_at: row.next_installment_due_at,
+            payment_status: "partial",
+            status: "active",
+          });
+          const total =
+            Number(row.installments_total) ||
+            RESEARCH_FELLOWSHIP_INSTALLMENT_COUNT;
+          const amountInr =
+            Number(row.installment_amount_inr) ||
+            RESEARCH_FELLOWSHIP_MONTHLY_INR;
+
+          try {
+            const mail = fellowshipInstallmentReminderEmail({
+              name,
+              installmentNumber,
+              installmentsTotal: total,
+              amountInr,
+              dueAt: row.next_installment_due_at,
+              payUrl,
+            });
+            await sendMail({ to: email, ...mail });
+            await createNotification({
+              userId: row.user_id,
+              type: "payment_reminder",
+              title: `Installment ${installmentNumber} of ${total} due`,
+              body: `Pay ₹${amountInr.toLocaleString("en-IN")} for your Research Fellowship.`,
+              metadata: {
+                courseId: RESEARCH_FELLOWSHIP_ID,
+                enrollmentId: row.id,
+                installmentNumber,
+              },
+            });
+            await admin
+              .from("enrollments")
+              .update({
+                installment_reminder_sent_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", row.id);
+            sent += 1;
+          } catch (err) {
+            const message =
+              err instanceof Error ? err.message : "reminder failed";
+            errors.push(`${email}: ${message}`);
+          }
+        }
+
+        res.json({
+          ok: true,
+          candidates: (rows || []).length,
+          sent,
+          skipped,
+          errors,
+        });
+      } catch (err) {
+        console.error("[admin/fellowship-installment-reminders]", err);
+        res.status(500).json({ error: "Failed to send installment reminders" });
       }
     }
   );

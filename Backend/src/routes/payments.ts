@@ -17,6 +17,16 @@ import {
   RESEARCH_FELLOWSHIP_PAYMENT_AMOUNTS,
   RESEARCH_FELLOWSHIP_MONTHLY_INR,
 } from "../lib/fellowship-gate.js";
+import {
+  addDaysIso,
+  canPayNextInstallment,
+  fellowshipAmountDisplay,
+  nextInstallmentNumber,
+  planMeta,
+  RESEARCH_FELLOWSHIP_INSTALLMENT_COUNT,
+  RESEARCH_FELLOWSHIP_INSTALLMENT_INTERVAL_DAYS,
+  type FellowshipPaymentPlan,
+} from "../lib/fellowship-installments.js";
 
 export const paymentsRouter = Router();
 
@@ -87,13 +97,18 @@ async function notifyPaymentSuccess(opts: {
   email: string | null | undefined;
   courseName: string;
   amountDisplay: string;
+  statusLabel?: string;
+  noteHtml?: string;
+  sendEnrollmentEmail?: boolean;
+  notificationBody?: string;
 }) {
   const tasks: Promise<unknown>[] = [
     createNotification({
       userId: opts.userId,
       type: "payment_success",
       title: "Payment confirmed",
-      body: `You're enrolled in ${opts.courseName}.`,
+      body:
+        opts.notificationBody || `You're enrolled in ${opts.courseName}.`,
       metadata: { courseId: opts.courseId },
     }),
   ];
@@ -102,13 +117,25 @@ async function notifyPaymentSuccess(opts: {
     const pay = paymentSuccessEmail(
       opts.name,
       opts.courseName,
-      opts.amountDisplay
+      opts.amountDisplay,
+      {
+        statusLabel: opts.statusLabel,
+        noteHtml: opts.noteHtml,
+        ctaLabel:
+          opts.courseId === RESEARCH_FELLOWSHIP_ID
+            ? "Open fellowship payment"
+            : undefined,
+        ctaHref:
+          opts.courseId === RESEARCH_FELLOWSHIP_ID
+            ? `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.seedqura.com"}/enroll/${RESEARCH_FELLOWSHIP_ID}#pay`
+            : undefined,
+      }
     );
-    const enroll = enrollmentConfirmationEmail(opts.name, opts.courseName);
-    tasks.push(
-      sendMail({ to: opts.email, ...pay }),
-      sendMail({ to: opts.email, ...enroll })
-    );
+    tasks.push(sendMail({ to: opts.email, ...pay }));
+    if (opts.sendEnrollmentEmail !== false) {
+      const enroll = enrollmentConfirmationEmail(opts.name, opts.courseName);
+      tasks.push(sendMail({ to: opts.email, ...enroll }));
+    }
   }
 
   await Promise.all(tasks);
@@ -143,21 +170,37 @@ async function activateEnrollment(opts: {
     })
     .eq("id", opts.paymentRowId)
     .neq("status", "paid")
-    .select("id");
+    .select("id, amount, raw");
 
   if (claimErr) throw claimErr;
   const won = (claimed?.length ?? 0) > 0;
+  if (!won) return "already_paid";
 
-  const [enrRes, profileRes, courseRes] = await Promise.all([
+  const paymentClaim = claimed![0];
+  const raw =
+    paymentClaim?.raw && typeof paymentClaim.raw === "object"
+      ? (paymentClaim.raw as Record<string, unknown>)
+      : {};
+  const paidAmountPaise = Number(paymentClaim?.amount ?? opts.amount);
+  const paidAmountInr =
+    typeof raw.amountInr === "number"
+      ? raw.amountInr
+      : Math.round(paidAmountPaise / 100);
+  const planFromRaw =
+    raw.paymentPlan === "monthly" || raw.paymentPlan === "full"
+      ? (raw.paymentPlan as FellowshipPaymentPlan)
+      : null;
+  const installmentFromRaw =
+    typeof raw.installmentNumber === "number" ? raw.installmentNumber : null;
+
+  const [{ data: enrollment }, profileRes, courseRes] = await Promise.all([
     admin
       .from("enrollments")
-      .update({
-        status: "active",
-        payment_status: "paid",
-        updated_at: now,
-      })
+      .select(
+        "id, status, payment_status, payment_plan, installments_total, installments_paid, installment_amount_inr, next_installment_due_at"
+      )
       .eq("id", opts.enrollmentId)
-      .neq("payment_status", "refunded"),
+      .maybeSingle(),
     admin
       .from("profiles")
       .select("full_name, email")
@@ -170,24 +213,95 @@ async function activateEnrollment(opts: {
       .maybeSingle(),
   ]);
 
+  if (!enrollment) {
+    throw new Error("Enrollment missing during payment activation");
+  }
+
+  const isFellowship = opts.courseId === RESEARCH_FELLOWSHIP_ID;
+  const plan: FellowshipPaymentPlan =
+    planFromRaw ||
+    (enrollment.payment_plan === "monthly" ? "monthly" : "full");
+  const meta = planMeta(plan);
+  const prevPaid = Number(enrollment.installments_paid) || 0;
+  const total =
+    Number(enrollment.installments_total) || meta.installmentsTotal;
+  const installmentNumber =
+    installmentFromRaw || Math.min(prevPaid + 1, total);
+  const installmentsPaid = Math.min(
+    Math.max(prevPaid + 1, installmentNumber),
+    total
+  );
+  const fullyPaid = installmentsPaid >= total || plan === "full";
+  const paymentStatus = fullyPaid ? "paid" : "partial";
+  const nextDue =
+    fullyPaid
+      ? null
+      : addDaysIso(new Date(), RESEARCH_FELLOWSHIP_INSTALLMENT_INTERVAL_DAYS);
+
+  const enrollmentUpdate: Record<string, unknown> = {
+    status: "active",
+    payment_status: paymentStatus,
+    updated_at: now,
+  };
+
+  if (isFellowship) {
+    enrollmentUpdate.payment_plan = plan;
+    enrollmentUpdate.installments_total = total;
+    enrollmentUpdate.installments_paid = installmentsPaid;
+    enrollmentUpdate.installment_amount_inr =
+      Number(enrollment.installment_amount_inr) || meta.installmentAmountInr;
+    enrollmentUpdate.next_installment_due_at = nextDue;
+    if (fullyPaid) {
+      enrollmentUpdate.installment_reminder_sent_at = null;
+    }
+  }
+
+  const enrRes = await admin
+    .from("enrollments")
+    .update(enrollmentUpdate)
+    .eq("id", opts.enrollmentId)
+    .neq("payment_status", "refunded");
   if (enrRes.error) throw enrRes.error;
-  if (!won) return "already_paid";
 
   const name = profileRes.data?.full_name || "";
   const email = profileRes.data?.email;
   const courseName = courseRes.data?.name || opts.courseId;
-  const amountDisplay =
-    courseRes.data?.price_display ||
-    `₹${(opts.amount / 100).toLocaleString("en-IN")}`;
+  const amountDisplay = isFellowship
+    ? fellowshipAmountDisplay({
+        amountInr: paidAmountInr,
+        plan,
+        installmentNumber,
+        installmentsTotal: total,
+      })
+    : courseRes.data?.price_display ||
+      `₹${(paidAmountPaise / 100).toLocaleString("en-IN")}`;
+
+  const remaining = Math.max(0, total - installmentsPaid);
+  const statusLabel = fullyPaid
+    ? "Paid in full"
+    : `Installment ${installmentsPaid} of ${total} paid`;
+  const noteHtml =
+    isFellowship && !fullyPaid
+      ? `This is <strong>installment ${installmentsPaid} of ${total}</strong>. Remaining: <strong>${remaining}</strong> × ₹${RESEARCH_FELLOWSHIP_MONTHLY_INR.toLocaleString("en-IN")}. Next due around <strong>${new Date(nextDue!).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" })}</strong>. We will email a reminder.`
+      : isFellowship && plan === "monthly" && fullyPaid
+        ? `All <strong>${total}</strong> monthly installments are complete. Thank you.`
+        : undefined;
 
   const sideEffects = notifyPaymentSuccess({
     userId: opts.userId,
     courseId: opts.courseId,
-    amount: opts.amount,
+    amount: paidAmountPaise,
     name,
     email,
     courseName,
     amountDisplay,
+    statusLabel,
+    noteHtml,
+    // Only send the welcome enrollment email on the first successful payment
+    sendEnrollmentEmail: installmentsPaid === 1,
+    notificationBody: fullyPaid
+      ? `You're enrolled in ${courseName}.`
+      : `Installment ${installmentsPaid}/${total} received for ${courseName}.`,
   }).then(async () => {
     const calendar = await syncEnrollmentCalendar(opts.enrollmentId);
     if (!calendar.ok && calendar.syncStatus !== "not_applicable") {
@@ -246,7 +360,7 @@ function resolveCheckoutAmount(
       return {
         ok: false,
         error:
-          "Choose full (₹19,999) or monthly (₹6,999) payment for the fellowship.",
+          "Choose full (₹19,999) or monthly (₹6,999 × 3 installments) for the fellowship.",
       };
     }
     return {
@@ -281,12 +395,55 @@ paymentsRouter.get(
           eligible: false,
           message: gate.message,
           email: req.userEmail ?? null,
+          installment: null,
         });
         return;
       }
+
+      let installment: Record<string, unknown> | null = null;
+      if (courseId === RESEARCH_FELLOWSHIP_ID && req.userId) {
+        const admin = getSupabaseAdmin();
+        const { data: enr } = await admin
+          .from("enrollments")
+          .select(
+            "id, status, payment_status, payment_plan, installments_total, installments_paid, installment_amount_inr, next_installment_due_at"
+          )
+          .eq("user_id", req.userId)
+          .eq("course_id", courseId)
+          .maybeSingle();
+        if (enr) {
+          const total =
+            Number(enr.installments_total) ||
+            (enr.payment_plan === "monthly"
+              ? RESEARCH_FELLOWSHIP_INSTALLMENT_COUNT
+              : 1);
+          const paid = Number(enr.installments_paid) || 0;
+          const canPayNext = canPayNextInstallment(enr);
+          installment = {
+            enrollmentId: enr.id,
+            paymentPlan: enr.payment_plan,
+            paymentStatus: enr.payment_status,
+            installmentsPaid: paid,
+            installmentsTotal: total,
+            installmentAmountInr:
+              Number(enr.installment_amount_inr) ||
+              RESEARCH_FELLOWSHIP_MONTHLY_INR,
+            nextInstallmentDueAt: enr.next_installment_due_at,
+            nextInstallmentNumber: canPayNext
+              ? nextInstallmentNumber(enr)
+              : null,
+            canPayNext,
+            fullyPaid:
+              enr.payment_status === "paid" ||
+              (total > 0 && paid >= total),
+          };
+        }
+      }
+
       res.json({
         eligible: true,
         email: req.userEmail ?? null,
+        installment,
       });
     } catch (err) {
       console.error("[payments/fellowship-eligibility]", err);
@@ -322,7 +479,9 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
         .maybeSingle(),
       admin
         .from("enrollments")
-        .select("id, status, payment_status")
+        .select(
+          "id, status, payment_status, payment_plan, installments_total, installments_paid, installment_amount_inr, next_installment_due_at, applicant_name, applicant_phone, institution, degree, year_of_study"
+        )
         .eq("user_id", userId)
         .eq("course_id", courseId)
         .maybeSingle(),
@@ -345,25 +504,79 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
       return;
     }
 
-    const requestedAmountInr =
-      req.body?.amountInr != null && req.body.amountInr !== ""
-        ? Number(req.body.amountInr)
-        : null;
-    const priced = resolveCheckoutAmount(
+    const continuingInstallment =
+      courseId === RESEARCH_FELLOWSHIP_ID &&
+      !!existing &&
+      canPayNextInstallment(existing);
+
+    if (
+      existing?.status === "active" &&
+      existing.payment_status === "paid"
+    ) {
+      res.status(400).json({ error: "Already enrolled" });
+      return;
+    }
+
+    if (
+      existing?.status === "active" &&
+      existing.payment_status === "partial" &&
+      !continuingInstallment
+    ) {
+      res.status(400).json({
+        error:
+          "Your fellowship installments are already complete or cannot accept another payment right now.",
+      });
+      return;
+    }
+
+    let priced = resolveCheckoutAmount(
       courseId,
       course.price_inr,
-      requestedAmountInr
+      req.body?.amountInr != null && req.body.amountInr !== ""
+        ? Number(req.body.amountInr)
+        : null
     );
     if (!priced.ok) {
       res.status(400).json({ error: priced.error });
       return;
     }
 
-    const applicantName = String(req.body?.fullName || "").trim();
-    const institution = String(req.body?.institution || "").trim();
-    const degree = String(req.body?.degree || "").trim();
-    const yearOfStudy = String(req.body?.yearOfStudy || "").trim();
-    const applicantPhone = String(req.body?.phone || "").replace(/\s/g, "");
+    let installmentNumber = 1;
+    if (continuingInstallment && existing) {
+      // Follow-up installments are always the monthly amount — cannot switch to full mid-plan.
+      if (priced.paymentPlan !== "monthly") {
+        res.status(400).json({
+          error:
+            "You are on the monthly plan. Pay the next ₹6,999 installment (you cannot switch to full fee mid-plan).",
+        });
+        return;
+      }
+      priced = {
+        ok: true,
+        amountInr: RESEARCH_FELLOWSHIP_MONTHLY_INR,
+        paymentPlan: "monthly",
+      };
+      installmentNumber = nextInstallmentNumber(existing);
+    } else if (
+      courseId === RESEARCH_FELLOWSHIP_ID &&
+      priced.paymentPlan === "monthly"
+    ) {
+      installmentNumber = 1;
+    }
+
+    const applicantName = String(
+      req.body?.fullName || existing?.applicant_name || ""
+    ).trim();
+    const institution = String(
+      req.body?.institution || existing?.institution || ""
+    ).trim();
+    const degree = String(req.body?.degree || existing?.degree || "").trim();
+    const yearOfStudy = String(
+      req.body?.yearOfStudy || existing?.year_of_study || ""
+    ).trim();
+    const applicantPhone = String(
+      req.body?.phone || existing?.applicant_phone || ""
+    ).replace(/\s/g, "");
 
     if (applicantName.length < 2) {
       res.status(400).json({ error: "Full name is required" });
@@ -389,70 +602,118 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
     }
 
     const now = new Date().toISOString();
-    const enrollmentPayload = {
-      status: "pending_payment",
-      payment_status: "pending",
-      institution,
-      degree,
-      year_of_study: yearOfStudy,
-      applicant_phone: applicantPhone,
-      applicant_name: applicantName,
-      updated_at: now,
-    };
-
     let enrollmentId = existing?.id;
-    if (
-      existing?.status === "active" &&
-      existing.payment_status === "paid"
-    ) {
-      res.status(400).json({ error: "Already enrolled" });
-      return;
-    }
 
-    if (!enrollmentId) {
-      const created = await admin
+    if (continuingInstallment && enrollmentId) {
+      // Keep active + partial; only refresh applicant contact fields.
+      const { error: touchErr } = await admin
         .from("enrollments")
-        .insert({
-          user_id: userId,
-          course_id: courseId,
-          ...enrollmentPayload,
+        .update({
+          institution,
+          degree,
+          year_of_study: yearOfStudy,
+          applicant_phone: applicantPhone,
+          applicant_name: applicantName,
+          updated_at: now,
         })
-        .select("id")
-        .single();
-      if (created.error) {
-        if (!isUniqueViolation(created.error)) throw created.error;
-        const again = await admin
+        .eq("id", enrollmentId)
+        .eq("payment_status", "partial");
+      if (touchErr) throw touchErr;
+    } else {
+      const planFields =
+        courseId === RESEARCH_FELLOWSHIP_ID
+          ? {
+              payment_plan: priced.paymentPlan,
+              installments_total: planMeta(
+                priced.paymentPlan === "monthly" ? "monthly" : "full"
+              ).installmentsTotal,
+              installments_paid: 0,
+              installment_amount_inr: priced.amountInr,
+              next_installment_due_at: null,
+            }
+          : {};
+
+      const enrollmentPayload = {
+        status: "pending_payment",
+        payment_status: "pending",
+        institution,
+        degree,
+        year_of_study: yearOfStudy,
+        applicant_phone: applicantPhone,
+        applicant_name: applicantName,
+        updated_at: now,
+        ...planFields,
+      };
+
+      if (!enrollmentId) {
+        const created = await admin
           .from("enrollments")
-          .select("id, status, payment_status")
-          .eq("user_id", userId)
-          .eq("course_id", courseId)
+          .insert({
+            user_id: userId,
+            course_id: courseId,
+            ...enrollmentPayload,
+          })
+          .select("id")
+          .single();
+        if (created.error) {
+          if (!isUniqueViolation(created.error)) throw created.error;
+          const again = await admin
+            .from("enrollments")
+            .select(
+              "id, status, payment_status, payment_plan, installments_total, installments_paid"
+            )
+            .eq("user_id", userId)
+            .eq("course_id", courseId)
+            .maybeSingle();
+          if (again.error) throw again.error;
+          if (!again.data) throw created.error;
+          if (
+            again.data.status === "active" &&
+            again.data.payment_status === "paid"
+          ) {
+            res.status(400).json({ error: "Already enrolled" });
+            return;
+          }
+          if (
+            again.data.status === "active" &&
+            again.data.payment_status === "partial"
+          ) {
+            res.status(409).json({
+              error:
+                "You already have an active installment plan. Refresh and pay the next installment.",
+            });
+            return;
+          }
+          enrollmentId = again.data.id;
+        } else {
+          enrollmentId = created.data.id;
+        }
+      }
+
+      // Do not downgrade an enrollment that is paid or mid-installment.
+      const kept = await admin
+        .from("enrollments")
+        .update(enrollmentPayload)
+        .eq("id", enrollmentId)
+        .in("payment_status", ["pending", "awaiting_verification", "failed"])
+        .select("id");
+      if (kept.error) throw kept.error;
+      if (!kept.data?.length) {
+        const { data: current } = await admin
+          .from("enrollments")
+          .select("payment_status")
+          .eq("id", enrollmentId)
           .maybeSingle();
-        if (again.error) throw again.error;
-        if (!again.data) throw created.error;
-        if (
-          again.data.status === "active" &&
-          again.data.payment_status === "paid"
-        ) {
-          res.status(400).json({ error: "Already enrolled" });
+        if (current?.payment_status === "partial") {
+          res.status(409).json({
+            error:
+              "You already have an active installment plan. Refresh and pay the next installment.",
+          });
           return;
         }
-        enrollmentId = again.data.id;
-      } else {
-        enrollmentId = created.data.id;
+        res.status(400).json({ error: "Already enrolled" });
+        return;
       }
-    }
-
-    // Do not downgrade an enrollment that another request just marked paid.
-    const kept = await admin
-      .from("enrollments")
-      .update(enrollmentPayload)
-      .eq("id", enrollmentId)
-      .neq("payment_status", "paid")
-      .select("id");
-    if (kept.error) throw kept.error;
-    if (!kept.data?.length) {
-      res.status(400).json({ error: "Already enrolled" });
-      return;
     }
 
     await admin
@@ -476,6 +737,7 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
       user_id: userId,
       payment_plan: priced.paymentPlan,
       amount_inr: String(priced.amountInr),
+      installment_number: String(installmentNumber),
     };
 
     const checkoutBody = (
@@ -520,7 +782,11 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
       ((openIsDev && !rz) || (!openIsDev && !!rz));
 
     if (canReuse && openPayment) {
-      res.json(checkoutBody(openOrderId, openPayment.id, openIsDev));
+      res.json({
+        ...checkoutBody(openOrderId, openPayment.id, openIsDev),
+        installmentNumber,
+        paymentPlan: priced.paymentPlan,
+      });
       return;
     }
 
@@ -551,13 +817,12 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
         amount: amountPaise,
         currency,
         status: "created",
-        raw: rz
-          ? { paymentPlan: orderNotes.payment_plan, amountInr: priced.amountInr }
-          : {
-              mode: "dev",
-              paymentPlan: orderNotes.payment_plan,
-              amountInr: priced.amountInr,
-            },
+        raw: {
+          ...(rz ? {} : { mode: "dev" }),
+          paymentPlan: orderNotes.payment_plan,
+          amountInr: priced.amountInr,
+          installmentNumber,
+        },
       })
       .select("id")
       .single();
@@ -590,7 +855,11 @@ paymentsRouter.post("/order", requireAuth, async (req: AuthedRequest, res) => {
       return;
     }
 
-    res.json(checkoutBody(orderId, inserted.data.id, !rz));
+    res.json({
+      ...checkoutBody(orderId, inserted.data.id, !rz),
+      installmentNumber,
+      paymentPlan: priced.paymentPlan,
+    });
   } catch (err) {
     console.error("[payments/order]", err);
     res.status(500).json({ error: "Failed to create order" });

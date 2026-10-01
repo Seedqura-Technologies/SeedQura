@@ -9,8 +9,10 @@ import { displayCoursePrice } from "@/lib/course-pricing";
 import {
   RESEARCH_FELLOWSHIP_APPLY_URL,
   RESEARCH_FELLOWSHIP_FULL_INR,
+  RESEARCH_FELLOWSHIP_INSTALLMENT_COUNT,
   RESEARCH_FELLOWSHIP_MONTHLY_INR,
   fellowshipAmountForPlan,
+  type FellowshipInstallmentInfo,
   type ResearchFellowshipPaymentPlan,
 } from "@/lib/fellowship";
 
@@ -141,12 +143,26 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
   /** Soft default: monthly installment so ₹19,999 is not the only path. */
   const [fellowshipPlan, setFellowshipPlan] =
     useState<ResearchFellowshipPaymentPlan>("monthly");
+  const [installmentInfo, setInstallmentInfo] =
+    useState<FellowshipInstallmentInfo | null>(null);
 
   const isFellowship = courseId === "research-fellowship";
+  const continuingInstallment = Boolean(installmentInfo?.canPayNext);
   const payAmountInr = useMemo(() => {
+    if (isFellowship && continuingInstallment) {
+      return (
+        installmentInfo?.installmentAmountInr || RESEARCH_FELLOWSHIP_MONTHLY_INR
+      );
+    }
     if (isFellowship) return fellowshipAmountForPlan(fellowshipPlan);
     return course?.price_inr ?? null;
-  }, [isFellowship, fellowshipPlan, course?.price_inr]);
+  }, [
+    isFellowship,
+    continuingInstallment,
+    installmentInfo?.installmentAmountInr,
+    fellowshipPlan,
+    course?.price_inr,
+  ]);
 
   const pageTitle = paymentOnly
     ? "Fellowship payment"
@@ -220,6 +236,28 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
               ? elig.email
               : profile?.email || ""
           );
+          const inst = elig.installment as FellowshipInstallmentInfo | null;
+          if (inst && typeof inst === "object") {
+            setInstallmentInfo({
+              enrollmentId: inst.enrollmentId,
+              paymentPlan: inst.paymentPlan,
+              paymentStatus: inst.paymentStatus,
+              installmentsPaid: Number(inst.installmentsPaid) || 0,
+              installmentsTotal:
+                Number(inst.installmentsTotal) ||
+                RESEARCH_FELLOWSHIP_INSTALLMENT_COUNT,
+              installmentAmountInr:
+                Number(inst.installmentAmountInr) ||
+                RESEARCH_FELLOWSHIP_MONTHLY_INR,
+              nextInstallmentDueAt: inst.nextInstallmentDueAt,
+              nextInstallmentNumber: inst.nextInstallmentNumber,
+              canPayNext: Boolean(inst.canPayNext),
+              fullyPaid: Boolean(inst.fullyPaid),
+            });
+            if (inst.canPayNext) {
+              setFellowshipPlan("monthly");
+            }
+          }
         } else {
           setFellowshipEligible(true);
         }
@@ -320,8 +358,26 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
             devComplete: true,
           }),
         });
+        const n =
+          typeof order.installmentNumber === "number"
+            ? order.installmentNumber
+            : continuingInstallment
+              ? installmentInfo?.nextInstallmentNumber
+              : fellowshipPlan === "monthly"
+                ? 1
+                : 1;
+        const total =
+          order.paymentPlan === "monthly" || continuingInstallment
+            ? RESEARCH_FELLOWSHIP_INSTALLMENT_COUNT
+            : 1;
         setDoneMessage(
-          `Payment recorded for ${course?.name || "this course"}. Your enrollment is active.`
+          isFellowship && (order.paymentPlan === "monthly" || continuingInstallment)
+            ? `Installment ${n} of ${total} recorded for ${course?.name || "the fellowship"}. ${
+                n < total
+                  ? "Access is active — we will remind you before the next installment."
+                  : "All installments are complete."
+              }`
+            : `Payment recorded for ${course?.name || "this course"}. Your enrollment is active.`
         );
         setStep("done");
         setLoading(false);
@@ -366,8 +422,25 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
                 body: verifyBody,
               });
             }
+            const n =
+              typeof order.installmentNumber === "number"
+                ? order.installmentNumber
+                : continuingInstallment
+                  ? installmentInfo?.nextInstallmentNumber
+                  : 1;
+            const monthly =
+              order.paymentPlan === "monthly" || continuingInstallment;
+            const total = monthly
+              ? RESEARCH_FELLOWSHIP_INSTALLMENT_COUNT
+              : 1;
             setDoneMessage(
-              `Payment confirmed for ${order.courseName || course?.name || "your course"}. Your enrollment is active.`
+              isFellowship && monthly
+                ? `Installment ${n} of ${total} confirmed for ${order.courseName || course?.name || "the fellowship"}. ${
+                    Number(n) < total
+                      ? "Access is active — we will email you before the next installment is due."
+                      : "All three installments are complete. Thank you."
+                  }`
+                : `Payment confirmed for ${order.courseName || course?.name || "your course"}. Your enrollment is active.`
             );
             setStep("done");
           } catch (err) {
@@ -604,9 +677,11 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
             className={`text-sm leading-relaxed text-muted ${paymentOnly ? "" : "mt-4 text-center"}`}
           >
             {isFellowship
-              ? paymentOnly
-                ? "Confirm policies, then choose full fee or monthly installment and pay with Razorpay. Only complete this if you received a selection offer."
-                : "Confirm policies, share your details, and pay with Razorpay (full ₹19,999 or monthly ₹6,999). Only complete this if you received a selection offer."
+              ? continuingInstallment
+                ? `Confirm and pay installment ${installmentInfo?.nextInstallmentNumber} of ${installmentInfo?.installmentsTotal} (₹6,999) with Razorpay.`
+                : paymentOnly
+                  ? "Confirm policies, then choose full fee or the 3-month installment plan and pay with Razorpay. Only complete this if you received a selection offer."
+                  : "Confirm policies, share your details, and pay with Razorpay (₹19,999 full or ₹6,999 × 3 installments). Only complete this if you received a selection offer."
               : "Review and accept our policies, then share your details and pay securely with Razorpay. Access unlocks as soon as payment succeeds."}
           </p>
           <div
@@ -750,7 +825,36 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
         <div className="mt-8 space-y-5 rounded-2xl border border-white/8 bg-[var(--surface-1)] p-6">
           <p className="text-sm text-muted">{stepPayLabel}</p>
 
-          {isFellowship ? (
+          {isFellowship && installmentInfo?.fullyPaid ? (
+            <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 text-sm text-text">
+              Your fellowship fee is paid in full. No further payment is needed.
+            </div>
+          ) : null}
+
+          {isFellowship && continuingInstallment ? (
+            <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 text-sm leading-relaxed text-text">
+              <p className="font-medium">
+                Installment {installmentInfo?.nextInstallmentNumber} of{" "}
+                {installmentInfo?.installmentsTotal}
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                You already paid {installmentInfo?.installmentsPaid} of{" "}
+                {installmentInfo?.installmentsTotal}. Pay the next ₹6,999 now
+                {installmentInfo?.nextInstallmentDueAt
+                  ? ` (due ${new Date(
+                      installmentInfo.nextInstallmentDueAt
+                    ).toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })})`
+                  : ""}
+                .
+              </p>
+            </div>
+          ) : null}
+
+          {isFellowship && !continuingInstallment && !installmentInfo?.fullyPaid ? (
             <fieldset className="space-y-3">
               <legend className="text-sm font-medium text-text">
                 Choose how to pay
@@ -771,10 +875,17 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
                 />
                 <span>
                   <span className="font-medium text-text">
-                    Monthly · {formatInr(RESEARCH_FELLOWSHIP_MONTHLY_INR)}
+                    Monthly · {formatInr(RESEARCH_FELLOWSHIP_MONTHLY_INR)} ×{" "}
+                    {RESEARCH_FELLOWSHIP_INSTALLMENT_COUNT}
                   </span>
                   <span className="mt-0.5 block text-xs leading-relaxed text-muted">
-                    Installment option — pay this amount now.
+                    Pay installment 1 now. We remind you for months 2 and 3
+                    (~every 30 days). Total ₹
+                    {(
+                      RESEARCH_FELLOWSHIP_MONTHLY_INR *
+                      RESEARCH_FELLOWSHIP_INSTALLMENT_COUNT
+                    ).toLocaleString("en-IN")}
+                    .
                   </span>
                 </span>
               </label>
@@ -798,7 +909,7 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
                     incl. GST
                   </span>
                   <span className="mt-0.5 block text-xs leading-relaxed text-muted">
-                    One-time payment for the full fellowship.
+                    One-time payment — no further installments.
                   </span>
                 </span>
               </label>
@@ -808,12 +919,27 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
           <div>
             <p className="text-lg font-medium text-text">
               Pay {formatInr(payAmountInr)}
-              {isFellowship && fellowshipPlan === "full" ? " incl. GST" : ""}
-              {isFellowship && fellowshipPlan === "monthly" ? " (monthly)" : ""}
+              {isFellowship &&
+              !continuingInstallment &&
+              fellowshipPlan === "full"
+                ? " incl. GST"
+                : ""}
+              {isFellowship &&
+              (continuingInstallment || fellowshipPlan === "monthly")
+                ? ` · installment ${
+                    continuingInstallment
+                      ? installmentInfo?.nextInstallmentNumber
+                      : 1
+                  } of ${RESEARCH_FELLOWSHIP_INSTALLMENT_COUNT}`
+                : ""}
             </p>
             <p className="mt-2 text-xs leading-relaxed text-muted">
               You&apos;ll complete payment in Razorpay with UPI, card, or net
-              banking. Enrollment unlocks as soon as the payment succeeds.
+              banking.
+              {isFellowship &&
+              (continuingInstallment || fellowshipPlan === "monthly")
+                ? " Program access stays active; remaining installments stay on your account until paid."
+                : " Enrollment unlocks as soon as the payment succeeds."}
             </p>
           </div>
 
@@ -824,10 +950,18 @@ export function EnrollClient({ courseId, paymentOnly = false }: Props) {
               type="button"
               variant="primary"
               className="w-full"
-              disabled={loading || payAmountInr == null}
+              disabled={
+                loading ||
+                payAmountInr == null ||
+                Boolean(installmentInfo?.fullyPaid)
+              }
               onClick={() => void startCheckout()}
             >
-              {loading ? "Opening checkout…" : `Pay ${formatInr(payAmountInr)}`}
+              {loading
+                ? "Opening checkout…"
+                : installmentInfo?.fullyPaid
+                  ? "Already paid in full"
+                  : `Pay ${formatInr(payAmountInr)}`}
             </MagneticButton>
             <button
               type="button"

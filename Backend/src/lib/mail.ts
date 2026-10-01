@@ -288,12 +288,21 @@ export function welcomeEmail(opts: {
 export function paymentSuccessEmail(
   name: string,
   courseName: string,
-  amountDisplay: string
+  amountDisplay: string,
+  opts?: {
+    statusLabel?: string;
+    noteHtml?: string;
+    ctaLabel?: string;
+    ctaHref?: string;
+  }
 ) {
   const safeName = escapeHtml(name || "there");
   const safeCourse = escapeHtml(courseName);
   const safeAmount = escapeHtml(amountDisplay);
   const dashboard = `${siteUrl()}/dashboard`;
+  const statusLabel = escapeHtml(opts?.statusLabel || "Paid");
+  const ctaLabel = opts?.ctaLabel || "View purchased courses";
+  const ctaHref = opts?.ctaHref || dashboard;
 
   return {
     subject: `Payment confirmed — ${courseName}`,
@@ -307,11 +316,67 @@ export function paymentSuccessEmail(
         ${detailRows([
           { label: "Course", value: safeCourse },
           { label: "Amount paid", value: safeAmount },
-          { label: "Status", value: "Paid" },
+          { label: "Status", value: statusLabel },
         ])}
+        ${
+          opts?.noteHtml
+            ? `<p style="margin:0 0 14px;">${opts.noteHtml}</p>`
+            : ""
+        }
         <p style="margin:0;">You’ll also receive an enrollment confirmation. Find this course under <strong>Purchased Products</strong> in your dashboard.</p>
       `,
-      cta: { label: "View purchased courses", href: dashboard },
+      cta: { label: ctaLabel, href: ctaHref },
+    }),
+  };
+}
+
+export function fellowshipInstallmentReminderEmail(opts: {
+  name: string;
+  installmentNumber: number;
+  installmentsTotal: number;
+  amountInr: number;
+  dueAt: string | null;
+  payUrl: string;
+}) {
+  const safeName = escapeHtml(opts.name || "there");
+  const amount = new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(opts.amountInr);
+  const dueLabel = opts.dueAt
+    ? new Date(opts.dueAt).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "Asia/Kolkata",
+      })
+    : "soon";
+
+  return {
+    subject: `Research Fellowship — installment ${opts.installmentNumber} of ${opts.installmentsTotal} due`,
+    html: emailLayout({
+      preheader: `Pay ${amount} for installment ${opts.installmentNumber} of ${opts.installmentsTotal} (due ${dueLabel}).`,
+      eyebrow: "Installment reminder",
+      title: "Your next fellowship installment is due",
+      bodyHtml: `
+        <p style="margin:0 0 14px;">Hi ${safeName},</p>
+        <p style="margin:0 0 14px;">This is a reminder for your <strong>Research Fellowship</strong> monthly plan.</p>
+        ${detailRows([
+          {
+            label: "Installment",
+            value: `${opts.installmentNumber} of ${opts.installmentsTotal}`,
+          },
+          { label: "Amount", value: escapeHtml(amount) },
+          { label: "Due", value: escapeHtml(dueLabel) },
+        ])}
+        <p style="margin:0;">Pay securely with Razorpay using the same selected email. Your program access stays active when installments are current.</p>
+      `,
+      cta: { label: "Pay installment", href: opts.payUrl },
+      secondaryCta: {
+        label: "Program details",
+        href: `${siteUrl()}/academy/research-fellowship`,
+      },
     }),
   };
 }
@@ -416,14 +481,14 @@ export function fellowshipSelectionEmail(opts: {
     subject: "Research Fellowship — you're selected · complete your fee",
     html: emailLayout({
       preheader:
-        "You're selected — pay ₹6,999/mo or ₹19,999 full within 72 hours.",
+        "You're selected — pay ₹6,999 × 3 monthly or ₹19,999 full within 72 hours.",
       eyebrow: "Research Fellowship",
       title: "You're selected",
       bodyHtml: `
         <p style="margin:0 0 14px;">Hi ${safeName},</p>
         <p style="margin:0 0 14px;">Congratulations — you&apos;ve been selected for the <strong>Seedqura Research Fellowship</strong> (3 months · live weekends).</p>
-        <p style="margin:0 0 14px;">Complete payment within <strong>72 hours</strong>. Choose <strong>₹6,999/mo</strong> (monthly installment) or <strong>₹19,999 full · incl. GST</strong>. Sign in with <strong>this email address</strong> before paying.</p>
-        <p style="margin:0;">After we verify your UTR, your fellowship access unlocks on your dashboard.</p>
+        <p style="margin:0 0 14px;">Complete payment within <strong>72 hours</strong> via Razorpay. Choose <strong>₹6,999 × 3 months</strong> (pay installment 1 now; we&apos;ll remind you for months 2 and 3) or <strong>₹19,999 full · incl. GST</strong>. Sign in with <strong>this email address</strong> before paying.</p>
+        <p style="margin:0;">Access unlocks as soon as your first successful payment is confirmed.</p>
       `,
       cta: { label: "Complete your fee", href: payUrl },
       secondaryCta: {

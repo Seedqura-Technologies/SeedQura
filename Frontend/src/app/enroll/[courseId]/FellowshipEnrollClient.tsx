@@ -16,7 +16,7 @@ import { EnrollClient } from "./EnrollClient";
 export function FellowshipEnrollClient() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const priceLabel = displayCoursePrice(19999, "₹19,999 · incl. GST");
-  const monthlyLabel = displayCoursePrice(6999, "₹6,999 / month");
+  const monthlyLabel = displayCoursePrice(6999, "₹6,999 × 3");
 
   useEffect(() => {
     let cancelled = false;
@@ -82,9 +82,9 @@ export function FellowshipEnrollClient() {
         </p>
         <p className="text-sm leading-relaxed text-muted">
           Received a selection offer? Sign in with the email we selected you
-          on, then complete payment within 72 hours — full fee or monthly
-          installment. Razorpay confirms the payment and unlocks fellowship
-          access.
+          on, then complete payment within 72 hours — ₹19,999 full or ₹6,999 × 3
+          monthly installments. Razorpay confirms each payment; access unlocks
+          after installment 1, and we remind you for months 2 and 3.
         </p>
 
         {signedIn === null ? (

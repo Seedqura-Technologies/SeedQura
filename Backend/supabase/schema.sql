@@ -147,6 +147,12 @@ alter table public.enrollments add column if not exists year_of_study text;
 alter table public.enrollments add column if not exists applicant_phone text;
 alter table public.enrollments add column if not exists applicant_name text;
 alter table public.enrollments add column if not exists utr_submitted_at timestamptz;
+alter table public.enrollments add column if not exists payment_plan text;
+alter table public.enrollments add column if not exists installments_total integer;
+alter table public.enrollments add column if not exists installments_paid integer not null default 0;
+alter table public.enrollments add column if not exists installment_amount_inr integer;
+alter table public.enrollments add column if not exists next_installment_due_at timestamptz;
+alter table public.enrollments add column if not exists installment_reminder_sent_at timestamptz;
 
 do $$
 declare
@@ -175,6 +181,7 @@ begin
         payment_status in (
           'pending',
           'awaiting_verification',
+          'partial',
           'paid',
           'failed',
           'refunded'

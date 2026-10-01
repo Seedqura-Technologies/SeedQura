@@ -25,6 +25,7 @@ export default function AdminFellowshipPage() {
   const [busy, setBusy] = useState(false);
   const [revoking, setRevoking] = useState<string | null>(null);
   const [resending, setResending] = useState<string | null>(null);
+  const [reminding, setReminding] = useState(false);
 
   const load = useCallback(async () => {
     const data = await apiFetch("/admin/fellowship-selections");
@@ -94,6 +95,26 @@ export default function AdminFellowshipPage() {
     }
   }
 
+  async function onSendInstallmentReminders() {
+    setReminding(true);
+    setError("");
+    setNotice("");
+    try {
+      const data = await apiFetch("/admin/fellowship-installment-reminders", {
+        method: "POST",
+      });
+      setNotice(
+        `Installment reminders: ${data.sent ?? 0} sent, ${data.skipped ?? 0} skipped (${data.candidates ?? 0} due).`
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to send installment reminders"
+      );
+    } finally {
+      setReminding(false);
+    }
+  }
+
   async function onRevoke(targetEmail: string) {
     const ok = window.confirm(
       `Revoke payment access for ${targetEmail}? They will not be able to pay until re-selected.`
@@ -126,6 +147,20 @@ export default function AdminFellowshipPage() {
           <p className="mt-3 text-sm font-medium text-text">
             Seats: {seatCount} / {seatCap}
           </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={reminding}
+              onClick={() => void onSendInstallmentReminders()}
+              className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-text transition hover:border-accent/40 hover:bg-accent/10 disabled:opacity-50"
+            >
+              {reminding ? "Sending reminders…" : "Send due installment reminders"}
+            </button>
+            <p className="text-xs text-muted">
+              Emails students on the ₹6,999 × 3 plan whose next installment is
+              due within 3 days (or overdue). Safe to run daily.
+            </p>
+          </div>
         </div>
 
         <form
@@ -169,7 +204,7 @@ export default function AdminFellowshipPage() {
               className="mt-1 h-4 w-4 accent-[var(--accent)]"
             />
             <span>
-              Email payment link to candidate (₹6,999/mo or ₹19,999 · sign in
+              Email payment link to candidate (₹6,999 × 3 or ₹19,999 · sign in
               with this email)
             </span>
           </label>

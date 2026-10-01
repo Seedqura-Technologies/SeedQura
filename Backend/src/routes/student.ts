@@ -208,7 +208,7 @@ studentRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
     const baseProfile = req.profile!;
 
     const enrollmentsSelect =
-      "id, status, payment_status, progress_pct, course_id, created_at, utr, utr_submitted_at, course:courses(id, name, description, duration, schedule_summary, price_display, price_inr, display_status, featured)";
+      "id, status, payment_status, progress_pct, course_id, created_at, utr, utr_submitted_at, payment_plan, installments_total, installments_paid, installment_amount_inr, next_installment_due_at, course:courses(id, name, description, duration, schedule_summary, price_display, price_inr, display_status, featured)";
     const notificationsSelect =
       "id, title, body, read_at, created_at, type, metadata";
 
@@ -245,7 +245,11 @@ studentRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
     const notifications = notificationsResult.data ?? [];
 
     const activeCourseIds = enrollments
-      .filter((e) => e.status === "active" && e.payment_status === "paid")
+      .filter(
+        (e) =>
+          e.status === "active" &&
+          (e.payment_status === "paid" || e.payment_status === "partial")
+      )
       .map((e) => e.course_id)
       .filter(Boolean);
 

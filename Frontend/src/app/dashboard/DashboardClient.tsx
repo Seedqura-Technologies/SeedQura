@@ -24,11 +24,19 @@ type Enrollment = {
   payment_status: string;
   progress_pct: number;
   course: Course | null;
+  payment_plan?: string | null;
+  installments_total?: number | null;
+  installments_paid?: number | null;
+  installment_amount_inr?: number | null;
+  next_installment_due_at?: string | null;
 };
 
 function enrollmentLabel(status: string, paymentStatus: string): string {
   if (paymentStatus === "awaiting_verification") return "Pending verification";
   if (status === "active" && paymentStatus === "paid") return "Active";
+  if (status === "active" && paymentStatus === "partial") {
+    return "Active · installment due";
+  }
   if (status === "rejected") return "Not approved";
   if (status === "pending_payment") return "Payment pending";
   if (status === "refunded") return "Refunded";
@@ -38,6 +46,7 @@ function enrollmentLabel(status: string, paymentStatus: string): string {
 function paymentLabel(paymentStatus: string): string {
   if (paymentStatus === "awaiting_verification") return "Awaiting verification";
   if (paymentStatus === "paid") return "Paid";
+  if (paymentStatus === "partial") return "Installments in progress";
   if (paymentStatus === "failed") return "Couldn’t verify";
   if (paymentStatus === "pending") return "Pending";
   if (paymentStatus === "refunded") return "Refunded";
@@ -442,7 +451,10 @@ export function StudentDashboard() {
                 </div>
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
-                {e.status === "active" && e.payment_status === "paid" && e.course?.id && (
+                {e.status === "active" &&
+                  (e.payment_status === "paid" ||
+                    e.payment_status === "partial") &&
+                  e.course?.id && (
                   <MagneticButton
                     href="/dashboard"
                     variant="secondary"
@@ -450,7 +462,9 @@ export function StudentDashboard() {
                     View upcoming sessions
                   </MagneticButton>
                 )}
-                {e.status === "active" && e.payment_status === "paid" && (
+                {e.status === "active" &&
+                  (e.payment_status === "paid" ||
+                    e.payment_status === "partial") && (
                 <MagneticButton
                   href="#"
                   variant="secondary"
@@ -458,6 +472,19 @@ export function StudentDashboard() {
                 >
                   Learning materials (soon)
                 </MagneticButton>
+                )}
+                {e.payment_status === "partial" &&
+                  e.course?.id === "research-fellowship" && (
+                  <MagneticButton
+                    href="/enroll/research-fellowship#pay"
+                    variant="primary"
+                  >
+                    Pay next installment
+                    {typeof e.installments_paid === "number" &&
+                    typeof e.installments_total === "number"
+                      ? ` (${e.installments_paid}/${e.installments_total})`
+                      : ""}
+                  </MagneticButton>
                 )}
                 {e.payment_status === "awaiting_verification" && (
                   <span className="inline-flex items-center rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-300">
